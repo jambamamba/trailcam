@@ -121,32 +121,70 @@ Condensed from `competitive-analysis.md`; legend ✅ v1 · 🟡 stretch · ❌ n
 
 ## 3. High-level architecture
 
-```
-+-------------------------------- CLIENTS ---------------------------------+
-| Browser PWA + WebAuthn  ·  iOS/Android Expo RN  ·  AI agents (MCP)       |
-+--------------------------------------------------------------------------+
-    | HTTPS + WebAuthn sessions             | MCP -- AI agents
-    | photos / status / settings            | streamable HTTP, scoped keys
-    v                                       v
-+--------------------------------- CLOUD ----------------------------------+
-| nginx :4440 --> Laravel app --> MongoDB                                  |
-|       |               |          (cameras, photos, detections, alerts)   |
-|       +--> MCP server /mcp                                               |
-|       +--> queue workers -- heartbeat . alerts . battery forecast        |
-| OTA artifacts (signed A/B) -- staged rollout: canary -> 10% -> 100%      |
-+--------------------------------------------------------------------------+
-    ^ HTTPS POST: photos + telemetry (device-initiated only --    | OTA
-    | the server never wakes the camera; commands piggyback       | pulls
-    | on the next report; SMS = urgent anti-theft only)           v
-+----+---------------------- DEVICE: wapiti cam -------------------+-------+
-| PIR + mmWave radar --wake-->  Camera SoC (Linux/Yocto)                   |
-| 8.4 MP sensor + IR arrays -->  capture . edge AI . upload                |
-| ESP32-C6 (BLE 5 + Wi-Fi 6, wake supervisor) <-> SoC                      |
-| Smart pack / 12xAA Li-FeS2 -->  LTE Cat-1bis + GNSS                      |
-+--------------------------------------------------------------------------+
+```mermaid
+flowchart LR
+    subgraph DEV["Device — wapiti cam"]
+        direction TB
+        SoC["Camera SoC<br/>Linux · Yocto<br/>capture + AI + upload"]
+        Sensor["8.4 MP sensor<br/>+ IR LED arrays"]
+        Modem["LTE Cat-1bis<br/>+ GNSS"]
+        Coproc["ESP32-C6<br/>BLE + Wi-Fi 2.4G"]
+        Pir["PIR + mmWave radar"]
+        BAT["Smart pack or<br/>12xAA Li-FeS2"]
+    end
 
-Direct radio (bypasses cloud): App <-> ESP32-C6 -- BLE pairing · Wi-Fi live aim
+    subgraph CLD["Cloud — Laravel + MongoDB"]
+        direction TB
+        Nginx["nginx<br/>trailcam-server :4440"]
+        Laravel["Laravel app"]
+        Mongo[("MongoDB<br/>cameras, photos,<br/>detections, alerts")]
+        Jobs["Queue workers<br/>heartbeat, alerts, forecast"]
+        Mcp["MCP server /mcp"]
+        Ota[/"OTA artifacts<br/>signed A-B"/]
+    end
+
+    subgraph CLI["Clients"]
+        direction TB
+        PWA["Browser PWA<br/>React + WebAuthn"]
+        App["iOS / Android<br/>Expo RN"]
+        Agent["AI agents<br/>MCP clients"]
+    end
+
+    Pir -->|"wake"| SoC
+    SoC --> Sensor
+    SoC --> Coproc
+    SoC --> Modem
+    BAT --> SoC
+    SoC -->|"HTTPS photo + telemetry"| Nginx
+    Nginx --> Laravel
+    Laravel --> Mongo
+    Laravel --> Jobs
+    Nginx --> Mcp
+    Mcp --> Laravel
+    Ota -->|"staged rollout"| Modem
+    PWA --> Nginx
+    App -->|"BLE pairing + Wi-Fi live aim"| Coproc
+    App --> Nginx
+    Agent --> Mcp
+
+    classDef device fill:#d5f5e3,stroke:#1e8449,color:#14532d
+    classDef power fill:#f9e79f,stroke:#b7950b,color:#5b4a00
+    classDef cloud fill:#d6eaf8,stroke:#2471a3,color:#154360
+    classDef clients fill:#fdebd0,stroke:#ca6f1e,color:#6e3b00
+    classDef security fill:#e8daef,stroke:#7d3c98,color:#4a235a
+
+    class SoC,Sensor,Modem,Coproc,Pir device
+    class BAT power
+    class Nginx,Laravel,Mongo,Jobs cloud
+    class Mcp,Ota security
+    class PWA,App,Agent clients
+
+    style DEV fill:#eafaf1,stroke:#1e8449
+    style CLD fill:#ebf5fb,stroke:#2471a3
+    style CLI fill:#fef5e7,stroke:#ca6f1e
 ```
+
+*Color key: green = device plane · yellow = power · blue = cloud · purple = security surfaces (MCP, OTA) · amber = clients.*
 
 Three planes, lugtrax conventions:
 - **Device → cloud:** HTTPS POST of photos + telemetry on PIR trigger, schedule, or check-in; modem in PSM between events; no persistent socket. **The server never wakes the camera** — commands piggyback on the next report response; SMS reserved for urgent anti-theft.
@@ -376,29 +414,29 @@ erDiagram
 
 ### 8.1 Heartbeat + dead-camera detection (the wedge)
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant C as Camera
+    participant L as Laravel API
+    participant H as Heartbeat worker
+    participant U as User app
+
+    rect rgb(212, 237, 218)
+        C->>L: report — photo / telemetry / check-in
+        L->>H: append heartbeats — expected_next_at = now + interval
+        H->>H: missed expected_next_at + grace → retry cadence
+    end
+    rect rgb(249, 231, 159)
+        H->>U: at_risk — Camera 3 missed its check-in — battery 61%, last photo 11:04
+    end
+    rect rgb(250, 219, 216)
+        H->>U: silent — Camera 3 is SILENT, plan a visit
+    end
+    Note over C,U: server never wakes the camera —<br/>reconnect backfills status transition
 ```
-   Camera                        Laravel ingest                     Heartbeat worker                  User (push/email)
-      |                                 |                                   |                                 |
-      | report: photo / telemetry /     |                                   |                                 |
-      | check-in                        |                                   |                                 |
-      +--------------------------------->                                   |                                 |
-      |                                 | append heartbeats;                |                                 |
-      |                                 | expected_next_at = now + interval |                                 |
-      |                                 +----------------------------------->                                 |
-      |                                 |                                   +-----------------------------+   |
-      |                                 |                                   | missed expected_next_at +       |
-      |                                 |                                   | grace -> retry cadence          |
-      |                                 |                                   <-----------------------------+   |
-      |                                 |                                   | at_risk: Camera 3 missed its    |
-      |                                 |                                   | check-in (battery 61%,          |
-      |                                 |                                   | last photo 11:04)               |
-      |                                 |                                   +--------------------------------->
-      |                                 |                                   | silent: Camera 3 is SILENT --   |
-      |                                 |                                   | plan a visit                    |
-      |                                 |                                   +--------------------------------->
-      note: server never wakes the camera; reconnect backfills status transition
-      |                                 |                                   |                                 |
-```
+
+*Color key: green = ingest path · amber = at-risk push · red = silent-death push.*
 
 ### 8.2 Capture → classify → deliver
 
