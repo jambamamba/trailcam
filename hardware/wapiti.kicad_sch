@@ -1,0 +1,114 @@
+(kicad_sch (version 20260306) (generator eeschema)
+  (generator_version "10.0")
+
+  (uuid de0f272c-8d7e-4a95-b6ba-9b3a8ab9f6b4)
+
+  (paper "A4")
+
+  (title_block
+    (title "wapiti trail camera - root")
+    (date "2026-10-04")
+    (rev "0.1")
+    (company "wapiti")
+  )
+
+  (sheet
+    (at 25.4 25.4) (size 190.5 63.5)
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+    (fields_autoplaced yes)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid f4ba5c6f-8425-4f5f-be1d-e9188e57d812)
+    (property "Sheetname" "power"
+      (at 25.4 25.4 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "power.kicad_sch"
+      (at 25.4 88.9 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "wapiti"
+        (path "/de0f272c-8d7e-4a95-b6ba-9b3a8ab9f6b4"
+          (page "2")
+        )
+      )
+    )
+  )
+
+  (sheet
+    (at 25.4 102.87) (size 190.5 58.42)
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+    (fields_autoplaced yes)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid 568d5df8-26c8-4d73-9749-d78a9bd52c64)
+    (property "Sheetname" "radio"
+      (at 25.4 102.87 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "radio.kicad_sch"
+      (at 25.4 161.29 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "wapiti"
+        (path "/de0f272c-8d7e-4a95-b6ba-9b3a8ab9f6b4"
+          (page "3")
+        )
+      )
+    )
+  )
+
+  (sheet
+    (at 25.4 175.26) (size 190.5 58.42)
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+    (fields_autoplaced yes)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid 811dc095-7232-4be4-a956-d8aeb6072e8a)
+    (property "Sheetname" "cam"
+      (at 25.4 175.26 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "cam.kicad_sch"
+      (at 25.4 233.68 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "wapiti"
+        (path "/de0f272c-8d7e-4a95-b6ba-9b3a8ab9f6b4"
+          (page "4")
+        )
+      )
+    )
+  )
+
+  (sheet
+    (at 25.4 236.22) (size 190.5 55)
+    (exclude_from_sim no) (in_bom yes) (on_board yes) (dnp no)
+    (fields_autoplaced yes)
+    (stroke (width 0.1524) (type solid))
+    (fill (color 0 0 0 0))
+    (uuid 6e496c33-82fa-4486-ade5-d16cf00faba8)
+    (property "Sheetname" "mcu"
+      (at 25.4 236.22 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left bottom))
+    )
+    (property "Sheetfile" "mcu.kicad_sch"
+      (at 25.4 291.22 0) (show_name no) (do_not_autoplace no)
+      (effects (font (size 1.27 1.27)) (justify left top))
+    )
+    (instances
+      (project "wapiti"
+        (path "/de0f272c-8d7e-4a95-b6ba-9b3a8ab9f6b4"
+          (page "5")
+        )
+      )
+    )
+  )
+
+  (sheet_instances
+    (path "/" (page "1"))
+  )
+)

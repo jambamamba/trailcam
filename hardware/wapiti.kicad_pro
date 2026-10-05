@@ -1,0 +1,20 @@
+{
+  "board": {
+    "3dviewports": [], "design_settings": {}, "layer_presets": [],
+    "viewports": []
+  },
+  "boards": [],
+  "cvpcb": {"equivalence_files": []},
+  "libraries": {"pinned_footprint_libs": [], "pinned_symbol_libs": []},
+  "meta": {"filename": "wapiti.kicad_pro", "version": 1},
+  "net_settings": {"classes": []},
+  "pcbnew": {
+    "last_paths": {"gencad": "", "step": "exports/wapiti.step"},
+    "page_layout_descr_file": ""
+  },
+  "schematic": {
+    "legacy_lib_dir": "", "legacy_lib_list": []
+  },
+  "sheets": [],
+  "text_variables": {}
+}

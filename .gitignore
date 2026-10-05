@@ -1,0 +1,42 @@
+# wapiti trail camera — gitignore
+#
+# NOTE: generated artifacts under hardware/chassis/out/ and hardware/exports/
+# (STL/OBJ/PNG/SVG/STEP/PDF) are INTENTIONALLY COMMITTED — the READMEs embed them
+# and everything regenerates from the scripts in hardware/ (see hardware/README.md).
+# Only local state, caches and editor/OS junk are ignored here.
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.coverage
+
+# --- KiCad local state / autosaves / backups (never regenerate-sensitive) ---
+*.kicad_prl
+fp-info-cache
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*-[0-9][0-9]-[0-9][0-9]-backup*.kicad_*
+~$*.kicad_*
+\#auto_saved_files\#
+\#*.kicad_\#
+rescue-backup/
+
+# --- Blender backups ---
+*.blend1
+*.blend2
+
+# --- OS / editor junk ---
+.DS_Store
+Thumbs.db
+desktop.ini
+*.swp
+*~
+.vscode/
+.idea/
+
+# --- Local temp / logs (real evidence reports in tests/reports/ stay tracked) ---
+*.log
+*.tmp
