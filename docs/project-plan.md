@@ -167,11 +167,11 @@ flowchart LR
     App --> Nginx
     Agent --> Mcp
 
-    classDef device fill:#d5f5e3,stroke:#1e8449,color:#14532d
-    classDef power fill:#f9e79f,stroke:#b7950b,color:#5b4a00
-    classDef cloud fill:#d6eaf8,stroke:#2471a3,color:#154360
-    classDef clients fill:#fdebd0,stroke:#ca6f1e,color:#6e3b00
-    classDef security fill:#e8daef,stroke:#7d3c98,color:#4a235a
+    classDef device fill:#1b4332,stroke:#40916c,color:#b7e4c7
+    classDef power fill:#5c470a,stroke:#d4a017,color:#ffe066
+    classDef cloud fill:#0f2a43,stroke:#4d94d0,color:#a8d5ff
+    classDef clients fill:#4a2c0f,stroke:#d98e32,color:#ffd9a0
+    classDef security fill:#3b1f4e,stroke:#9b59b6,color:#e0c3fc
 
     class SoC,Sensor,Modem,Coproc,Pir device
     class BAT power
@@ -179,9 +179,9 @@ flowchart LR
     class Mcp,Ota security
     class PWA,App,Agent clients
 
-    style DEV fill:#eafaf1,stroke:#1e8449
-    style CLD fill:#ebf5fb,stroke:#2471a3
-    style CLI fill:#fef5e7,stroke:#ca6f1e
+    style DEV fill:#12291a,stroke:#40916c,color:#d8f3dc
+    style CLD fill:#0d1f30,stroke:#4d94d0,color:#d0e7ff
+    style CLI fill:#2b1c0d,stroke:#d98e32,color:#ffe3c2
 ```
 
 *Color key: green = device plane · yellow = power · blue = cloud · purple = security surfaces (MCP, OTA) · amber = clients.*
@@ -422,15 +422,15 @@ sequenceDiagram
     participant H as Heartbeat worker
     participant U as User app
 
-    rect rgb(212, 237, 218)
+    rect rgb(215, 226, 213)
         C->>L: report — photo / telemetry / check-in
         L->>H: append heartbeats — expected_next_at = now + interval
         H->>H: missed expected_next_at + grace → retry cadence
     end
-    rect rgb(249, 231, 159)
+    rect rgb(230, 224, 205)
         H->>U: at_risk — Camera 3 missed its check-in — battery 61%, last photo 11:04
     end
-    rect rgb(250, 219, 216)
+    rect rgb(232, 214, 211)
         H->>U: silent — Camera 3 is SILENT, plan a visit
     end
     Note over C,U: server never wakes the camera —<br/>reconnect backfills status transition
@@ -452,12 +452,12 @@ flowchart TD
     Q -->|"coverage"| D
     D --> A["Alerts: human / vehicle push<br/>species digest"]
 
-    classDef wake fill:#d5f5e3,stroke:#1e8449,color:#14532d
-    classDef decide fill:#fdebd0,stroke:#ca6f1e,color:#6e3b00
-    classDef local fill:#f9e79f,stroke:#b7950b,color:#5b4a00
-    classDef net fill:#d6eaf8,stroke:#2471a3,color:#154360
-    classDef retry fill:#fadbd8,stroke:#c0392b,color:#641e16
-    classDef alert fill:#e8daef,stroke:#7d3c98,color:#4a235a
+    classDef wake fill:#1b4332,stroke:#40916c,color:#b7e4c7
+    classDef decide fill:#4a2c0f,stroke:#d98e32,color:#ffd9a0
+    classDef local fill:#5c470a,stroke:#d4a017,color:#ffe066
+    classDef net fill:#0f2a43,stroke:#4d94d0,color:#a8d5ff
+    classDef retry fill:#4a1414,stroke:#e57373,color:#ffc9c9
+    classDef alert fill:#3b1f4e,stroke:#9b59b6,color:#e0c3fc
 
     class W,B wake
     class P decide
