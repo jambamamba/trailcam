@@ -121,46 +121,31 @@ Condensed from `competitive-analysis.md`; legend ✅ v1 · 🟡 stretch · ❌ n
 
 ## 3. High-level architecture
 
-```mermaid
-flowchart LR
-    subgraph Device - wapiti cam
-        SoC[Camera SoC<br/>Linux (Yocto)<br/>capture + AI + upload]
-        Sensor[8.4 MP sensor<br/>+ IR LED arrays]
-        Modem[LTE Cat-1bis<br/>+ GNSS]
-        Coproc[ESP32-C6<br/>BLE + Wi-Fi 2.4G]
-        Pir[PIR + mmWave radar]
-        BAT[Smart pack or<br/>12xAA Li-FeS2]
-    end
+```
++-------------------------------- CLIENTS ---------------------------------+
+| Browser PWA + WebAuthn  ·  iOS/Android Expo RN  ·  AI agents (MCP)       |
++--------------------------------------------------------------------------+
+    | HTTPS + WebAuthn sessions             | MCP -- AI agents
+    | photos / status / settings            | streamable HTTP, scoped keys
+    v                                       v
++--------------------------------- CLOUD ----------------------------------+
+| nginx :4440 --> Laravel app --> MongoDB                                  |
+|       |               |          (cameras, photos, detections, alerts)   |
+|       +--> MCP server /mcp                                               |
+|       +--> queue workers -- heartbeat . alerts . battery forecast        |
+| OTA artifacts (signed A/B) -- staged rollout: canary -> 10% -> 100%      |
++--------------------------------------------------------------------------+
+    ^ HTTPS POST: photos + telemetry (device-initiated only --    | OTA
+    | the server never wakes the camera; commands piggyback       | pulls
+    | on the next report; SMS = urgent anti-theft only)           v
++----+---------------------- DEVICE: wapiti cam -------------------+-------+
+| PIR + mmWave radar --wake-->  Camera SoC (Linux/Yocto)                   |
+| 8.4 MP sensor + IR arrays -->  capture . edge AI . upload                |
+| ESP32-C6 (BLE 5 + Wi-Fi 6, wake supervisor) <-> SoC                      |
+| Smart pack / 12xAA Li-FeS2 -->  LTE Cat-1bis + GNSS                      |
++--------------------------------------------------------------------------+
 
-    subgraph Cloud
-        Nginx[nginx<br/>trailcam-server :4440]
-        Laravel[Laravel app]
-        Mongo[(MongoDB<br/>cameras, photos,<br/>detections, alerts)]
-        Jobs[Queue workers<br/>heartbeat, alerts, forecast]
-        Mcp[MCP server /mcp]
-        Ota[/OTA artifacts<br/>signed A-B/]
-    end
-
-    subgraph Clients
-        PWA[Browser PWA<br/>React + WebAuthn]
-        App[iOS / Android<br/>Expo RN]
-        Agent[AI agents<br/>MCP clients]
-    end
-
-    Pir -->|wake| SoC
-    SoC --> Sensor
-    SoC --> Coproc
-    SoC --> Modem
-    BAT --> SoC
-    SoC -->|HTTPS photo + telemetry| Nginx
-    Nginx --> Laravel --> Mongo
-    Laravel --> Jobs
-    Nginx --> Mcp --> Laravel
-    Ota -->|staged rollout| Modem
-    PWA --> Nginx
-    App -->|BLE pairing, Wi-Fi live aim| Coproc
-    App --> Nginx
-    Agent --> Mcp
+Direct radio (bypasses cloud): App <-> ESP32-C6 -- BLE pairing · Wi-Fi live aim
 ```
 
 Three planes, lugtrax conventions:
@@ -391,35 +376,57 @@ erDiagram
 
 ### 8.1 Heartbeat + dead-camera detection (the wedge)
 
-```mermaid
-sequenceDiagram
-    autonumber
-    participant C as Camera
-    participant L as Laravel (ingest)
-    participant H as Heartbeat worker
-    participant U as User (push/email)
-
-    C->>L: report (photo/telemetry/check-in)
-    L->>H: append heartbeats; expected_next_at = now + interval
-    H->>H: on missed expected_next_at + grace: retry cadence
-    H->>U: status=at_risk → "Camera 3 missed its check-in (battery 61%, last photo 11:04)"
-    H->>U: status=silent after 2× grace → "Camera 3 is SILENT — plan a visit"
-    Note over C,U: server never wakes the camera;<br/>reconnect backfills status transition
+```
+   Camera                        Laravel ingest                     Heartbeat worker                  User (push/email)
+      |                                 |                                   |                                 |
+      | report: photo / telemetry /     |                                   |                                 |
+      | check-in                        |                                   |                                 |
+      +--------------------------------->                                   |                                 |
+      |                                 | append heartbeats;                |                                 |
+      |                                 | expected_next_at = now + interval |                                 |
+      |                                 +----------------------------------->                                 |
+      |                                 |                                   +-----------------------------+   |
+      |                                 |                                   | missed expected_next_at +       |
+      |                                 |                                   | grace -> retry cadence          |
+      |                                 |                                   <-----------------------------+   |
+      |                                 |                                   | at_risk: Camera 3 missed its    |
+      |                                 |                                   | check-in (battery 61%,          |
+      |                                 |                                   | last photo 11:04)               |
+      |                                 |                                   +--------------------------------->
+      |                                 |                                   | silent: Camera 3 is SILENT --   |
+      |                                 |                                   | plan a visit                    |
+      |                                 |                                   +--------------------------------->
+      note: server never wakes the camera; reconnect backfills status transition
+      |                                 |                                   |                                 |
 ```
 
 ### 8.2 Capture → classify → deliver
 
 ```mermaid
 flowchart TD
-    W[PIR / radar / timer wake] --> B[SoC boot ≤1.5 s]
-    B --> P{Edge classify<br/>PIR + radar + AI v0}
-    P -- empty --> S[Store on camera, count, no upload<br/>does not bill]
-    P -- animal/human/vehicle --> C[Capture 2.5K/4K + optional 1080p10]
-    C --> U[LTE upload, instant-send]
-    U -- ok --> D[Delivered; latency recorded]
-    U -- fail --> Q[Store-and-forward ring buffer<br/>retry w/ backoff]
-    Q -->|coverage| D
-    D --> A[Alerts: human/vehicle push<br/>species digest]
+    W["PIR / radar / timer wake"] --> B["SoC boot ≤1.5 s"]
+    B --> P{"Edge classify<br/>PIR + radar + AI v0"}
+    P -->|"empty"| S["Store on camera, count, no upload<br/>does not bill"]
+    P -->|"animal / human / vehicle"| C["Capture 2.5K / 4K + optional 1080p10"]
+    C --> U["LTE upload, instant-send"]
+    U -->|"ok"| D["Delivered; latency recorded"]
+    U -->|"fail"| Q["Store-and-forward ring buffer<br/>retry with backoff"]
+    Q -->|"coverage"| D
+    D --> A["Alerts: human / vehicle push<br/>species digest"]
+
+    classDef wake fill:#d5f5e3,stroke:#1e8449,color:#14532d
+    classDef decide fill:#fdebd0,stroke:#ca6f1e,color:#6e3b00
+    classDef local fill:#f9e79f,stroke:#b7950b,color:#5b4a00
+    classDef net fill:#d6eaf8,stroke:#2471a3,color:#154360
+    classDef retry fill:#fadbd8,stroke:#c0392b,color:#641e16
+    classDef alert fill:#e8daef,stroke:#7d3c98,color:#4a235a
+
+    class W,B wake
+    class P decide
+    class S local
+    class C,U net
+    class Q retry
+    class D,A alert
 ```
 
 ### 8.3 Pairing (lugtrax §7.2 pattern, BLE via C6)
@@ -508,7 +515,7 @@ gantt
     section S2 Device
     SoC bring-up + capture pipeline  :s2a, 2026-10-20, 8d
     PIR/radar wake + power budget    :s2b, after s2a, 6d
-    LTE upload + pairing (BLE/WiFi)  :s2c, after s2b, 6d
+    LTE upload + pairing BLE/WiFi   :s2c, after s2b, 6d
     Battery telemetry + ring buffer  :s2d, after s2b, 4d
 
     section S3 Value features
@@ -521,12 +528,12 @@ gantt
     section S4 Apps + commerce
     Expo apps + push                 :s4a, 2026-11-17, 8d
     Subscriptions + sharing          :s4b, after s4a, 5d
-    Edge v1 classifier (spike->impl) :s4c, after s3c, 8d
+    Edge v1 classifier spike→impl   :s4c, after s3c, 8d
     Solar rig + accessory SKUs       :s4d, after s4b, 5d
 
     section S5 Hardening + launch
     PQT incl -40C mitten-swap gate   :s5a, 2026-12-01, 10d
-    Cert closures (FCC/PTCRB/RED)    :s5b, after s1d, 20d
+    Cert closures FCC/PTCRB/RED     :s5b, after s1d, 20d
     Store + quotas + docs            :s5c, 2026-12-01, 6d
     30-day field soak + E2E green    :s5d, after s5a, 6d
 ```
