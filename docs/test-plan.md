@@ -50,7 +50,7 @@ Modeled on the **luggage-tracker / wificam / blip.io** test-plan methodology: Py
 
 ### 1.1 Catalog authority (sync rule)
 
-`tests/test.py` is the single source of truth: **every ID documented here must run, and every test that runs must be documented.** Until a suite exists, its IDs are **pending** (specified + expected, not yet implemented). No ID may exist in only one place; project-plan §16 and the regression report totals move in lockstep with this file. Nothing is implemented yet — **0 passed / 293 pending**.
+`tests/test.py` is the single source of truth: **every ID documented here must run, and every test that runs must be documented.** Until a suite exists, its IDs are **pending** (specified + expected, not yet implemented). No ID may exist in only one place; project-plan §16 and the regression report totals move in lockstep with this file. Nothing is implemented yet — **0 passed / 301 pending**.
 
 ### 1.2 Summary (per-prefix counts)
 
@@ -66,7 +66,7 @@ Modeled on the **luggage-tracker / wificam / blip.io** test-plan methodology: Py
 | Photos & detections | IMG | 8 | pending |
 | PIR / edge AI | PIR | 8 | pending |
 | Power & battery | PWR | 10 | pending |
-| Networking | NET | 10 | pending |
+| Networking | NET | 18 | pending |
 | Alerts | ALR | 10 | pending |
 | MCP | MCP | 20 | pending |
 | OTA | OTA | 8 | pending |
@@ -87,7 +87,7 @@ Modeled on the **luggage-tracker / wificam / blip.io** test-plan methodology: Py
 | Browser E2E | BROWSER | 4 | pending |
 | Cold chamber | COLD | 8 | pending (lab) |
 | Product qualification | PQT | 14 | pending (lab) |
-| **Total** | | **293** | **0 passed / 293 pending** |
+| **Total** | | **301** | **0 passed / 301 pending** |
 
 ---
 
@@ -253,6 +253,22 @@ Bench + simulated; the false-trigger ledger (P5) requires empties never to bill.
 | NET-08 | Reserve-battery anti-theft ping | main power removed + moved > ½ mi | pings every 6 h on reserve rail |
 | NET-09 | Wi-Fi AP scan diagnostics | C6 | ≥ 3 MACs reported for placement coach |
 | NET-10 | OTA download over LTE without photo loss | OTA + concurrent triggers | no lost captures |
+
+**Cellular link discipline (§8.6 of project-plan; material distilled from
+`interview-questions/interview_cellular_retries_qa.md`):** backoff with full jitter, idempotent
+replays, outbox durability, signal gating, and fleet storm protection. Device-side tests run on the
+bench with a fault-injecting proxy; fleet soak tests run against `trailcam-sim`.
+
+| ID | Description | Surface | Expected |
+|---|---|---|---|
+| NET-11 | Backoff schedule deterministic with injected fake clock: exact sleeps = `min(cap, base·2^n)` + full jitter | device unit test (fake clock) | sleep sequence asserted exactly; no fixed-interval retry anywhere |
+| NET-12 | Transient vs permanent: 503 retried, 400/401 never retried | fault proxy | 4xx fails fast — no retry burn, error surfaced to telemetry |
+| NET-13 | Idempotent replay: same `Idempotency-Key` re-posted after lost ack | fault proxy drops response, device re-sends | original response replayed; **no duplicate photo/heartbeat rows** |
+| NET-14 | Outbox survives reboot mid-upload: kill power during TX, restore | bench power-cut rig | unsynced rows re-drained in order after boot; nothing lost, nothing duplicated |
+| NET-15 | Signal gating: collapsing RSRP → defer, never accelerate retries | programmable attenuator | modem parks to PSM; next attempt at next scheduled wake |
+| NET-16 | Modem circuit breaker: N consecutive transport failures → cooldown, no TX storm | fault proxy | current trace shows no retry bursts; wake aligns with schedule |
+| NET-17 | Fleet soak: 200 sim cameras through 30 min backend brownout (503s) | `trailcam-sim` fleet + proxy | ingest CPU/queue flat; retry volume ≤ budget; **no thundering herd on recovery** |
+| NET-18 | Staggered reconnect: fleet offline 2 h (tower outage sim), backend restored | `trailcam-sim` fleet | reconnects spread over minutes (per-`device_id` windows), not a single spike |
 
 ---
 
@@ -624,6 +640,7 @@ PQT/COLD artifacts (lab reports, photos, serials) filed under `tests/reports/pqt
 | Local download AP mode (§5.4) | LDL-01..12 | Full |
 | Encrypted-at-rest media (§15.1) | ENC-01..08 | Full |
 | Networking + store-and-forward (§8.2) | NET-01..10, E2E-11..12 | Full |
+| Cellular link discipline — retries/idempotency/storm protection (§8.6) | NET-11..18 | Full |
 | Anti-theft + reserve GPS (§8.4) | NET-07..08, E2E-14..15, CAM-09..10 | Full |
 | Alerts (§8) | ALR-01..10 | Full |
 | MCP (§11.1) | MCP-01..20, GAP-16..17 | Full |

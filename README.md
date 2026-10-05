@@ -12,7 +12,7 @@ Wapiti is an open-hardware cellular trail camera built for the harshest hunts: a
 | Document | What's inside |
 | --- | --- |
 | [Project plan](docs/project-plan.md) | Architecture, BOM & power budget (§4), Yocto firmware plan (meta-wapiti / yocto-cam) |
-| [Test plan](docs/test-plan.md) | 293 test IDs across all subsystems, incl. YOCT-01…06 firmware bring-up |
+| [Test plan](docs/test-plan.md) | 301 test IDs across all subsystems, incl. YOCT-01…06 firmware bring-up |
 | [Competitive analysis](docs/competitive-analysis.md) | Positioning vs Tactacam Reveal and peers; −40 °C power strategy (§4.2), mitten-swap chassis (§4.13) |
 | [Tactacam Reveal research report](docs/tactacam-reveal-hunt-cameras-product-research-report.md) | Product research on the market-leading cellular trail camera |
 | [Hardware guide](hardware/README.md) | Schematic/PCB/chassis artifacts, regeneration commands, PCB↔chassis mapping, Value SKU (wapiti-lite) |

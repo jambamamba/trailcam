@@ -479,6 +479,28 @@ Move-alert (accel) or human/vehicle detection arms theft mode (auto-rule or manu
 
 Signed A/B firmware (ECDSA P-256), staged `canary → 10% → 100%`, boot-failure rollback counters; `rollback_of` audit linkage. Camera SoC (Linux rootfs) and C6 firmware are separate artifacts.
 
+### 8.6 Cellular link discipline — retries, idempotency, fleet protection
+
+Method note distilled from `interview-questions/interview_cellular_retries_qa.md` (cellular retry-engineering briefing): software must behave correctly when the radio lies — tower handoffs eat acks, coverage holes are normal, and a naive retry loop that works in the lab hammers the backend in the field and burns the pack.
+
+**Per-class retry policy** (configurable, never a fixed count):
+
+| Message class | Attempts | Backoff | Deadline / budget |
+|---|---|---|---|
+| Photo/telemetry upload (trigger-driven) | 6 | `min(cap 120 s, base 2 s · 2^n)` + **full jitter** (`random(0, window)`) | then store-and-forward (§8.2) |
+| Heartbeat check-in | 3 | base 30 s, cap 10 min, full jitter | miss → HB engine handles (§8.1) |
+| OTA pull | 5 | base 60 s, cap 1 h | battery-gated: abort below 20% (BMS rule) |
+| SMS fallback | 1 | — | never retried (cost); next report carries state |
+
+- **Transient vs permanent:** retry 5xx, timeouts, connection resets; **never retry 4xx** (400/401/422 will never succeed — retrying burns battery and poisons metrics).
+- **Idempotency:** every device POST carries a stable `Idempotency-Key` (UUID per report / photo batch, persisted before first TX). At-least-once delivery over the radio is the only realistic default; exactly-once *effects* come from ingest-side dedup (unique index → replay original response). A lost ack in a tower handoff must never produce a duplicate photo row or double-counted heartbeat.
+- **Outbox durability:** the §8.2 ring buffer is an outbox — rows written to eMMC before TX, marked synced only on server ack, drained in order after reboot. Work never lives only in RAM; the OS will not be alive when the network returns.
+- **Modem circuit breaker:** N consecutive transport failures → modem cooldown (PSM until next scheduled wake). The battery is the breaker: no self-imposed TX storms.
+- **Signal gating:** read RSRP/SINR before deciding *now vs defer*. Collapsing signal → defer to next wake, never accelerate. Retrying while the modem is between RRC states forces an expensive ACTIVE transition — "should I even send this now" is a modem-state question.
+- **Fleet retry budget:** ingest caps fleet-wide retries (~10% of request volume); over budget → `429` + jittered `Retry-After`, which clients honor. A degraded backend stops being amplified by the fleet.
+- **Staggered reconnect:** after a long outage, reconnect windows are spread over several minutes, seeded by `device_id` (server directive piggybacked on reports). Devices that all lost service at 02:00 must not all return at 02:01.
+- **Instrumentation:** DNS failures counted separately from TCP failures (resolver faults masquerade as network down); correlation IDs + client/server timestamps on every attempt; modem state, RSRP and RTT captured **at failure time**, not just in aggregates.
+
 ---
 
 ## 9. Server stack
@@ -580,9 +602,9 @@ gantt
 |---|---|
 | S1 — Foundations | `AUTH-01..18`, `SRV/SVC/PHP/MIG/BLD`, `SIM-01..06`, `ING-01..10` |
 | S2 — Device | `CAM-DEV-01..14`, `YOCT-01..03`, `PIR-01..04`, `PWR-01..05`, `NET-01..05`, `PR-01..08` |
-| S3 — Value | `HB-01..08`, `YOCT-04..06`, `PIR-05..08`, `PWR-06..10`, `NET-06..10`, `IMG-01..08`, `ALR-01..10`, `MCP-01..20`, `OTA-01..08`, `BROWSER-01..04`, `ENC-01..08` |
+| S3 — Value | `HB-01..08`, `YOCT-04..06`, `PIR-05..08`, `PWR-06..10`, `NET-06..14`, `IMG-01..08`, `ALR-01..10`, `MCP-01..20`, `OTA-01..08`, `BROWSER-01..04`, `ENC-01..08` |
 | S4 — Apps + commerce | `SUB-01..08`, `SHR-01..06`, `ADM-01..08`, E2E chains |
-| S5 — Hardening | `COLD-01..08`, `PQT-01..14`, `GAP-01..20`, `BAT-01..06`, full E2E, security review |
+| S5 — Hardening | `COLD-01..08`, `PQT-01..14`, `GAP-01..20`, `BAT-01..06`, `NET-15..18`, full E2E, security review |
 
 ### Work items
 
@@ -674,7 +696,7 @@ Engineering-level IP screen of the wapiti design and docs; **not legal advice** 
 
 **User app** — `/api/sites`, `/api/cameras` (CRUD, claim, config `PATCH`), `/api/cameras/{id}/photos` (paginated, class filter), `/api/cameras/{id}/status` (heartbeat/forecast/signal), `/api/cameras/{id}/theft-mode`, `/api/cameras/{id}/share-links`, `/api/alerts` + `/api/alerts/stream` (SSE), `/api/subscription/*`, `/admin/api/*`.
 
-**Device** — `/device/v1/pair`, `/device/v1/reports` (telemetry + heartbeat), `/device/v1/photos` (multipart, batch manifests), `/device/v1/events` (move alert, door open, tamper), `/device/v1/ota/ack`. Config/commands piggyback on responses.
+**Device** — `/device/v1/pair`, `/device/v1/reports` (telemetry + heartbeat), `/device/v1/photos` (multipart, batch manifests), `/device/v1/events` (move alert, door open, tamper), `/device/v1/ota/ack`. Config/commands piggyback on responses. All device POSTs carry an `Idempotency-Key` header; ingest dedups on a unique index and replays the original response (§8.6). Fleet retry budget enforced with `429` + jittered `Retry-After`.
 
 ---
 
@@ -708,7 +730,7 @@ Threat: the camera or microSD is stolen — the most common way sensitive media 
 
 ## 16. Testing plan (summary)
 
-Full catalog in `test-plan.md` (**0 passed / 293 pending** at planning time), same methodology as lugtrax: Python `requests`+pytest primary suite with prefixed IDs, Pest, Playwright, infra regression runner, device suites over SSH, faraday/cold-chamber lab suites, coverage matrix, regression log with Mermaid.
+Full catalog in `test-plan.md` (**0 passed / 301 pending** at planning time), same methodology as lugtrax: Python `requests`+pytest primary suite with prefixed IDs, Pest, Playwright, infra regression runner, device suites over SSH, faraday/cold-chamber lab suites, coverage matrix, regression log with Mermaid.
 
 | Suite | Prefix | Covers |
 |---|---|---|
@@ -770,6 +792,7 @@ trailcam/
 | 9 | SigmaStar/Ingenic BSPs ship as Buildroot SDKs, not Yocto layers | `meta-sigmastar` BSP layer wraps the vendor kernel/u-boot/ISP blobs; S1 spike as WI-201 precondition; S2-exit decision gate may fall back to the vendor rootfs if bring-up stalls |
 | 10 | Patent exposure — reserve-battery anti-theft GPS deliberately mirrors Ultra's marketed Active GPS; Tactacam files patents and NPEs are active in this category | **FTO search commissioned S1 (WI-107), findings before S2 exit — blocking**; match / design-around / license decided with counsel; §4.11 wording discipline (capability, not implementation) |
 | 11 | Media-key recovery misdesign = permanent photo loss (escrow too weak → thief decrypts; too strict → owner locked out) | Escrow under account KMS + WebAuthn recovery ceremony; `ENC-05..06` cover release/revocation; recovery drill before S4 exit |
+| 12 | Fleet retry storm after backend outage/deploy wakes every camera at once and amplifies the degradation | Per-class backoff + full jitter, ingest retry budget (429 + Retry-After), modem circuit breaker, staggered reconnect windows (§8.6); storm soak-tested (`NET-17..18`) |
 
 ---
 
