@@ -70,7 +70,7 @@ Ranked by how often and how angrily the complaint appears across sources. Each p
 ### P3. The subscription squeeze
 - Spypoint: "They keep charging my bank account" (r/trailcam); Trustpilot 1.3/5 (265 reviews) on the store, 1.5/5 on cameras; PissedConsumer 2.3/5 cites "billing issues" among top complaints.
 - Tactacam: headline features (Live View, on-demand video, HD) are paywalled add-ons (Xtra $4–9/mo, Live View ~$6/mo) — GearJunkie con: "have to pay extra to unlock all features"; photo pools run dry (Starter = 250), then overage fees.
-- Category-wide: plans are per-camera, seasonal users pay for idle months unless they remember to pause; churn-trap renewals and "prepaid SIM expires" patterns echo the luggage-tracker study.
+- Category-wide: plans are per-camera, seasonal users pay for idle months unless they remember to pause; churn-trap renewals and "prepaid SIM expires" patterns echo the lugtrax study.
 
 ### P4. Delivery delays and photo latency
 - Spypoint Flex-M2 (Outdoor Life test): "the camera took a few hours to transmit a photo after it was triggered"; Tactacam X 3.0 (Trailcampro): "cellular transmission is sporadic" and batch-sending blocks new bursts; r/Hunting on Moultrie: cameras "did not check in for a few days."

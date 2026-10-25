@@ -1,6 +1,6 @@
 # Test Plan — Trail Camera (wapiti)
 
-Modeled on the **luggage-tracker / wificam / blip.io** test-plan methodology: Python `requests` + pytest as the primary suite, prefixed test IDs, E2E chain tests, regression documentation with Mermaid flowcharts, gap coverage after code review, and markdown report generation. Device-side suites follow the lugtrax DEV/SAT pattern; **COLD** (−40 °C chamber + mitten rig) and **PQT** (product qualification) capture the certification and marketing claims defined in `competitive-analysis.md` §4.2/§4.13 and project-plan §5/§13.
+Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `requests` + pytest as the primary suite, prefixed test IDs, E2E chain tests, regression documentation with Mermaid flowcharts, gap coverage after code review, and markdown report generation. Device-side suites follow the lugtrax DEV/SAT pattern; **COLD** (−40 °C chamber + mitten rig) and **PQT** (product qualification) capture the certification and marketing claims defined in `competitive-analysis.md` §4.2/§4.13 and project-plan §5/§13.
 
 ## Table of Contents
 

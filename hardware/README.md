@@ -1,7 +1,7 @@
 # wapiti hardware — generated KiCad + 3D-printable chassis
 
 Everything in this directory is **generated from Python** (no hand-edited CAD), using the same
-approach as the `luggage-tracker` LT-1: emitters write KiCad s-expressions with symbols embedded
+approach as the `lugtrax` LT-1: emitters write KiCad s-expressions with symbols embedded
 inline (lib prefix `wapiti:`), custom footprints go to `wapiti.pretty/`, and `kicad-cli` validates
 the results. Hardware stays reviewable in diffs and regenerable from the BOM in
 [project-plan §4–5](../docs/project-plan.md).

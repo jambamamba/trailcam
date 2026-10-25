@@ -3,10 +3,10 @@
 Working name: **wapiti** (repo: `trailcam`). A cellular trail camera product built around a **4K low-power camera SoC + LTE Cat-1bis + BLE/Wi-Fi co-processor**, a **−40 °C-rated, mitten-swappable power system**, a **Laravel + MongoDB** web application with **WebAuthn passkey** login, an **MCP server** exposing cameras to AI agents, and **iOS/Android apps (Expo React Native)** + PWA. The product wedge is **verifiable reliability**: heartbeat + dead-camera detection, honest battery math, delivery-latency honesty, and support as a feature (`competitive-analysis.md` §4).
 
 Modeled on:
-- The five-sprint program shape, work-item numbering, domain-model conventions, and MCP layer of **luggage-tracker** (`/repos/www/luggage-tracker/docs/project-plan.md`) — our closest sibling (battery-powered LTE device + Laravel cloud + MCP).
+- The five-sprint program shape, work-item numbering, domain-model conventions, and MCP layer of **lugtrax** (`/repos/www/lugtrax/docs/project-plan.md`) — our closest sibling (battery-powered LTE device + Laravel cloud + MCP).
 - The camera-hardware lessons of **wificam** (`/repos/www/wificam/docs/project-plan.md`): ESP32-CAM class hardware caps at 2 MP/OV2640 — a 4K parity product needs a real camera SoC.
 - The **Yocto platform pattern** of **wificam §2.2** (`meta-wificam` product layer on a hardened substrate, SWUpdate A/B, read-only rootfs): reused here via a `meta-wapiti` layer. The Jetson substrate itself is not reusable (L4T/CUDA-specific), so the trailcam gets its own machine-agnostic `yocto-cam` substrate + BSP layer.
-- The Laravel/MongoDB + nginx + WebAuthn + Docker service-group stack of **blip.io / wificam / luggage-tracker**.
+- The Laravel/MongoDB + nginx + WebAuthn + Docker service-group stack of **blip.io / wificam / lugtrax**.
 
 **Product basis.** `tactacam-reveal-hunt-cameras-product-research-report.md` (parity spec + competitor pricing) and `competitive-analysis.md` Rev B (pain points → solutions; −40 °C power system §4.2; mitten-swap chassis §4.13).
 
@@ -796,4 +796,4 @@ trailcam/
 
 ---
 
-*Sources: `tactacam-reveal-hunt-cameras-product-research-report.md` (parity + pricing), `competitive-analysis.md` Rev B (pains → solutions; §4.2 power, §4.13 chassis), luggage-tracker project-plan (program shape, MCP, certs), wificam project-plan (camera-hardware evidence: ESP32 class ceiling, house stack).*
+*Sources: `tactacam-reveal-hunt-cameras-product-research-report.md` (parity + pricing), `competitive-analysis.md` Rev B (pains → solutions; §4.2 power, §4.13 chassis), lugtrax project-plan (program shape, MCP, certs), wificam project-plan (camera-hardware evidence: ESP32 class ceiling, house stack).*
