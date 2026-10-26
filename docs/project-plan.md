@@ -520,6 +520,8 @@ Method note distilled from `interview-questions/interview_cellular_retries_qa.md
 
 nginx site `default.wapiti.cam`: `/api/`, `/auth/`, `/device/`, `/admin/api/`, `/mcp` → Laravel :8003; `client_max_body_size 25M` (4K photos + video bursts); block `.env`, `storage/`, `vendor/`.
 
+**Operator access — house tailnet.** The camera backhaul stays LTE (`NET-01..18`), but *operator* reach to this backend (and to a field unit's debug surface) can ride the shared **headscale** tailnet that now runs on the dev host (`/repos/www/headscale`, control plane on port **4443**, managed by `start-stop-services.sh --service=headscale`). On the operator laptop: `tailscale up --login-server=https://<host>:4443 --auth-key=<preauth key>` → `http://trailcam-ingest.<user>.home.arpa` (headscale serves TLS on a self-signed cert for now — trust it once on the laptop); keys are minted/revoked per operator with `docker exec headscale headscale preauthkeys create|nodes delete`. No port forwarding on the ingest host, and the join/reachability contract is written down in `/repos/www/headscale/docs/test-plan.md` (JN-01..08).
+
 ---
 
 ## 10. Authentication (WebAuthn)
