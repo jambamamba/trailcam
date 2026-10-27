@@ -7,6 +7,7 @@ Modeled on:
 - The camera-hardware lessons of **wificam** (`/repos/www/wificam/docs/project-plan.md`): ESP32-CAM class hardware caps at 2 MP/OV2640 — a 4K parity product needs a real camera SoC.
 - The **Yocto platform pattern** of **wificam §2.2** (`meta-wificam` product layer on a hardened substrate, SWUpdate A/B, read-only rootfs): reused here via a `meta-wapiti` layer. The Jetson substrate itself is not reusable (L4T/CUDA-specific), so the trailcam gets its own machine-agnostic `yocto-cam` substrate + BSP layer.
 - The Laravel/MongoDB + nginx + WebAuthn + Docker service-group stack of **blip.io / wificam / lugtrax**.
+- The **cell-modem reuse assessments** of `/repos/utils/share/docs/cell-modem-reuse/` (Podimetrics SmartMat+ engagement, Oct 2026): the house **Quectel BG950A-GL Cat-M1** module was assessed for wapiti and **rejected for the media path** — the BOM rules out LTE-M by name (§4.2). What transfers in full is the **Quectel AT driver discipline, cert-provisioning path, and field-measured HTTP failure catalogue** (§8.7, `NET-19..24`) — the EG915U speaks the same AT family.
 
 **Product basis.** `tactacam-reveal-hunt-cameras-product-research-report.md` (parity spec + competitor pricing) and `competitive-analysis.md` Rev B (pain points → solutions; −40 °C power system §4.2; mitten-swap chassis §4.13).
 
@@ -15,17 +16,17 @@ Modeled on:
 ## Table of Contents
 
 1. [Goals & non-goals](#1-goals--non-goals)
-2. [Competitive feature matrix — copy, match, and leapfrog](#2-competitive-feature-matrix)
+2. [Competitive feature matrix — copy, match, and leapfrog](#2-competitive-feature-matrix--copy-match-and-leapfrog)
 3. [High-level architecture](#3-high-level-architecture)
 4. [Hardware inventory & bill of materials](#4-hardware-inventory--bill-of-materials)
-5. [Power architecture (−40 °C) & chassis design](#5-power-architecture--40-c--chassis-design) — incl. §5.4 BLE-gated local download
+5. [Power architecture (−40 °C) & chassis design](#5-power-architecture-40-c--chassis-design) — incl. §5.4 BLE-gated local download
 6. [Domain model & first-class objects](#6-domain-model--first-class-objects)
 7. [Tiers, RBAC & sharing](#7-tiers-rbac--sharing)
 8. [Data & control flows](#8-data--control-flows)
 9. [Server stack (Laravel + MongoDB + nginx)](#9-server-stack)
 10. [Authentication (WebAuthn)](#10-authentication-webauthn)
-11. [AI & MCP layer — the differentiator](#11-ai--mcp-layer)
-12. [Sprint plan (S1 → S5)](#12-sprint-plan)
+11. [AI & MCP layer — the differentiator](#11-ai--mcp-layer--the-differentiator)
+12. [Sprint plan (S1 → S5)](#12-sprint-plan-s1--s5)
 13. [Certifications & compliance](#13-certifications--compliance)
 14. [API surface](#14-api-surface)
 15. [Security posture](#15-security-posture)
@@ -38,23 +39,24 @@ Modeled on:
 
 ## Implementation Status
 
-Not started; planning docs complete. Status legend: `[x]` done · `[~]` in progress · `[ ]` not started.
+S1 foundations landing (WI-101 → WI-104 done 2026-10-26/27); planning docs complete. Status legend: `[x]` done · `[~]` in progress · `[ ]` not started.
 
 | Component | Status | Notes |
 |---|---|---|
 | Research + competitive analysis | `[x]` Done | `tactacam-reveal-…-report.md`, `competitive-analysis.md` (Rev B) |
 | project-plan / test-plan | `[x]` Done | This file + `test-plan.md` |
+| Test harness (`tests/`) | `[x]` Done | `tests/test.py` (HTTP catalog authority, AUTH-01..18 + ING-01..10) + `tests/regression.py` (infra: MIG/PHP/SRV/SVC/BLD) + Pest mirror in `server/tests/`; **49 green / 258 pending** (latest runs 2026-10-27) |
 | Device firmware (camera SoC + C6) | `[ ]` | Yocto Linux (`meta-wapiti` on `yocto-cam` substrate) + Zephyr on C6; bring-up S2 |
 | Device simulator (`sim/`) | `[ ]` | Photo/report simulator for cloud work without hardware |
-| Laravel scaffold + WebAuthn (AUTH) | `[ ]` | Reuse wificam/lugtrax WebAuthn contract verbatim |
-| MongoDB schema + migrations | `[ ]` | 13 collections (§6) |
-| nginx site + service group | `[ ]` | `trailcam-server` case, port **4440** |
-| Ingest API (`/device/v1/*`) | `[ ]` | Device bearer auth, config/commands piggyback |
+| Laravel scaffold + WebAuthn (AUTH) | `[x]` Done | `server/` Laravel 12 + MongoDB + `web-auth/webauthn-lib`; 10-endpoint `/auth/*` contract (§10/§14); Pest `AUTH-01..18` + `tests/test.py` `AUTH-01..18` both green (18 passed, 2026-10-26) |
+| MongoDB schema + migrations | `[x]` Done | 14 collections (§6.1: users, credentials, sites, cameras, photos, detections, heartbeats, pair_tokens, alert_rules, alerts, share_links, subscriptions, ota_campaigns, audit_log) + indexes; `MIG-01..05` green |
+| nginx site + service group | `[x]` Done | `trailcam-server:v1` + `default.wapiti.cam` TLS site on **4444** (pulled forward to unblock WI-101's HTTPS test gate), `start-stop-services.sh`, `trailcam-builder:v1` / `trailcam-test:v1` one-shots + `Dockerfile.sim` (image builds with WI-105); `SVC-01..04`, `BLD-01..05` green |
+| Ingest API (`/device/v1/*`) | `[x]` Done | Device bearer auth, photo multipart, config piggyback, rate limits; `ING-01..10` green (2026-10-26, re-verified 2026-10-27) |
 | Heartbeat + dead-camera engine (the wedge) | `[ ]` | S3 — firmware critical path |
 | MCP server (`/mcp`) | `[ ]` | Official Laravel MCP package, S3 |
 | OTA campaigns | `[ ]` | Signed A/B firmware, staged rollout |
 | Mobile apps (Expo) | `[ ]` | S4; PWA ships first (S3) |
-| Certification program (§13) | `[ ]` | Kick off S1 — radio lead times 6–9 months |
+| Certification program (§13) | `[~]` | Kickoff docs **drafted** (`certification-kickoff.md` + `wi-106-certification-playbook.md`, 2026-10-26/27); **DRAFT awaiting the human Step 0 approval gate** — module requal decision open (§19 risk 14); radio lead times 6–9 months |
 
 ---
 
@@ -135,7 +137,7 @@ flowchart LR
 
     subgraph CLD["Cloud — Laravel + MongoDB"]
         direction TB
-        Nginx["nginx<br/>trailcam-server :4440"]
+        Nginx["nginx<br/>trailcam-server :4444"]
         Laravel["Laravel app"]
         Mongo[("MongoDB<br/>cameras, photos,<br/>detections, alerts")]
         Jobs["Queue workers<br/>heartbeat, alerts, forecast"]
@@ -193,9 +195,11 @@ Three planes, lugtrax conventions:
 
 ### 3.1 Containerized builds (no compilation on the host)
 
+*Dev-host port note (Oct 2026): the house block **4430–4443 is already published** (wificam 4438, food-portal 4439, **lugtrax-server 4440**, haven 4441, nurhub 4442, headscale 4443), so `trailcam-server` takes the next free host port **4444**. Docker on this host publishes container ports via iptables only — loopback never binds — so the WebAuthn dev origin is the docker0 gateway: `https://172.17.0.1:4444` (RP_ID `172.17.0.1`), fixed per environment and never derived from the Host header (§10).*
+
 | Container | Image | Ports | Purpose |
 |---|---|---|---|
-| `trailcam-server` | `nginx:v5` | **4440** | Laravel + nginx + MCP |
+| `trailcam-server` | `nginx:v5` | **4444** | Laravel + nginx + MCP |
 | `trailcam-builder` | `trailcam-builder:v1` | — | One-shot builds; Yocto image build in CI (kas/bitbake → `wapiti-image.swu`) + Zephyr SDK for the C6 |
 | `trailcam-test` | `trailcam-test:v1` | — | One-shot Python API suite |
 | `trailcam-sim` | `trailcam-sim:v1` | — | Fleet of simulated cameras posting photos/telemetry (test only) |
@@ -224,7 +228,7 @@ Three planes, lugtrax conventions:
 | PIR + Fresnel | AS312-class digital PIR, dual element | 1 | $0.9 | Wake source |
 | mmWave radar | 24 GHz motion radar (LD2410-class), optional populate | 1 | $3 | PIR+radar fusion kills false triggers (P5); DNP on cost-down SKUs |
 | Co-processor | ESP32-C6 (BLE 5 + Wi-Fi 6 2.4 GHz) | 1 | $2 | BLE pairing, Wi-Fi live-aim/preview, AP-scan diagnostics, watchdog |
-| Cellular | Quectel **EG915U** LTE Cat-1bis **+ GNSS combo** (or SimCom A7672SA) | 1 | $11 | Photo-class uplink (5 M UL) vs LTE-M's 375 k; multi-carrier; GNSS on-module saves BOM |
+| Cellular | Quectel **EG915U** LTE Cat-1bis **+ GNSS combo** (or SimCom A7672SA) | 1 | $11 | Photo-class uplink (5 M UL) vs LTE-M's 375 k; multi-carrier; GNSS on-module saves BOM; house BG950A-GL Cat-M1 module assessed for reuse and **rejected** — wrong radio category for media, but its AT driver lessons are adopted (§8.7) · ⚠ **kickoff §1 verification (2026-10-26):** Quectel's own spec shows **no NA variant (CN/EU/LA only), no GNSS, no PTCRB/US-carrier approvals**, and the LA band map lacks B12/B13/B71 — requalification open (**§19 risk 14**); named alternate **A7672SA has the same band gap** |
 | eSIM | Multi-IMSI consumer eSIM, carrier profiles staged by us | 1 | $2 | Bundled connectivity (lugtrax §6.1.1 pattern) |
 | Accel | LIS2DW12 ultra-low-power 3-axis | 1 | $1 | Move alert / theft GPS trigger |
 | Fuel gauge + pack ID | BQ27441-class gauge; SHT3x temp/humidity; pack-ID EEPROM | 1 | $2 | Smart-pack telemetry, chemistry auto-detect |
@@ -243,7 +247,7 @@ Three planes, lugtrax conventions:
 
 | Item | Qty | Purpose |
 |---|---|---|
-| SSC377Q + IMX415 EVK, EG915U EVB, ESP32-C6 devkit | 1 ea | Firmware bring-up before PCBs |
+| SSC377Q + IMX415 EVK, cellular module EVB (choice per §19 risk 14 — not EG915U by default), ESP32-C6 devkit | 1 ea | Firmware bring-up before PCBs |
 | Cold chamber (or rental slot) + mitten rig | 1 | §5/§13 gates; PQT-COLD suite |
 | Power analyzer (µA-class, e.g. Otii/Joulescope) | 1 | Power-budget validation (PWR suite) |
 | PIR/radar test rig + range course | 1 | PIR false-trigger regression |
@@ -373,7 +377,7 @@ erDiagram
 
 **`detections`** — `{_id, camera_id, owner_id, class: deer|turkey|human|vehicle|empty|other, confidence, photo_id, on_device_decided: bool, billed: bool, capture_at}` — `empty` rows keep the audit trail without billing.
 
-**`heartbeats`** — `{_id, camera_id, at, battery_snapshot, signal_snapshot, expected_next_at, transport}` — TTL-indexed rolling window; the engine evaluates `status`.
+**`heartbeats`** — `{_id, camera_id, at, battery_snapshot, signal_snapshot, expected_next_at, transport}` — TTL-indexed rolling window (**90 d**, decided in WI-102: long enough for a season of burn-down evidence, short enough that the hot collection stays small); `expected_next_at` indexed for the wedge scan; the engine evaluates `status`.
 
 **`pair_tokens`** — `{token: PRT-xxxx-xxxx, device_id, issued_by, expires_at (15 min, TTL), consumed_at}`.
 
@@ -496,10 +500,24 @@ Method note distilled from `interview-questions/interview_cellular_retries_qa.md
 - **Idempotency:** every device POST carries a stable `Idempotency-Key` (UUID per report / photo batch, persisted before first TX). At-least-once delivery over the radio is the only realistic default; exactly-once *effects* come from ingest-side dedup (unique index → replay original response). A lost ack in a tower handoff must never produce a duplicate photo row or double-counted heartbeat.
 - **Outbox durability:** the §8.2 ring buffer is an outbox — rows written to eMMC before TX, marked synced only on server ack, drained in order after reboot. Work never lives only in RAM; the OS will not be alive when the network returns.
 - **Modem circuit breaker:** N consecutive transport failures → modem cooldown (PSM until next scheduled wake). The battery is the breaker: no self-imposed TX storms.
-- **Signal gating:** read RSRP/SINR before deciding *now vs defer*. Collapsing signal → defer to next wake, never accelerate. Retrying while the modem is between RRC states forces an expensive ACTIVE transition — "should I even send this now" is a modem-state question.
+- **Signal gating:** read RSRP/SINR before deciding *now vs defer*. Collapsing signal → defer to next wake, never accelerate. Retrying while the modem is between RRC states forces an expensive ACTIVE transition — "should I even send this now" is a modem-state question. **On Quectel modules the read happens *before the request is staged* (before `AT+QHTTPURL`), never between staging and the verb** — see §8.7 rule 2; sampling signal mid-staging is a measured cause of 701/702 failures.
 - **Fleet retry budget:** ingest caps fleet-wide retries (~10% of request volume); over budget → `429` + jittered `Retry-After`, which clients honor. A degraded backend stops being amplified by the fleet.
 - **Staggered reconnect:** after a long outage, reconnect windows are spread over several minutes, seeded by `device_id` (server directive piggybacked on reports). Devices that all lost service at 02:00 must not all return at 02:01.
 - **Instrumentation:** DNS failures counted separately from TCP failures (resolver faults masquerade as network down); correlation IDs + client/server timestamps on every attempt; modem state, RSRP and RTT captured **at failure time**, not just in aggregates.
+
+### 8.7 Modem AT driver discipline — Quectel lineage (Podimetrics bench evidence)
+
+Our house Cat-M1 module (Quectel **BG950A-GL**) was assessed for reuse and **rejected for the media path** — LTE-M (~375 kbps real-world up) is a telemetry category, roughly an order of magnitude short of the 5 Mbps Cat-1bis uplink the plan requires for 4K photos; the EG915U stays (assessment: `/repos/utils/share/docs/cell-modem-reuse/trailcam-cell-modem-assessment.md`). What **does** transfer is the driver experience: several thousand instrumented HTTPS uploads on the same Quectel AT family (Podimetrics SmartMat+ engagement, Oct 2026 — `/repos/utils/share/docs/cell-modem-reuse/podimetrics-cell-modem.md`). The EG915U speaks the same `AT+QHTTP*` command family, so these rules get baked into the WI-204 driver rather than rediscovered in the field. Verified by `NET-19..24`.
+
+1. **HTTP/TLS runs on the modem, not the host.** `AT+QHTTPCFG` / `AT+QHTTPURL` / `AT+QHTTPPOSTFILE`, posting files from the modem filesystem, response read back with `AT+QHTTPREADFILE`; certificates live on the modem filesystem (`AT+QFUPL`) and bind to an SSL context (`AT+QSSLCFG`); plain TLS and mTLS with a client certificate both work. No host IP stack, no PPP.
+2. **The staging window is sacred.** Between `AT+QHTTPURL` and the POST verb the modem holds a staged request; *any* AT traffic in that window (notably `AT+CREG?`/`AT+CSQ`) causes 701/702 failures — the Podimetrics firmware queried registration and signal there on every upload, against its own vendor code's warning. **Sample RSRP/SINR before staging and cache it**; the driver must serialize so nothing touches the modem while a request is staged or in flight (this is the §8.6 signal-gating read, moved ahead of the request).
+3. **Registration ≠ usable bearer.** `CREG`/`CEREG` saying "registered" says nothing about whether the PDP context survives; `CEREG: 0,5` with no active context was captured repeatedly. Gate uploads on `AT+QIACT?` — never trust the link on registration status alone.
+4. **701 means "I did not send it" and nothing more.** ~3% of field HTTPS POSTs fail this way; at the failure moment `AT+QIGETERROR` reports *operate successfully*, `AT+CEER` is empty, the PDP context is up with an IP and registration is intact — the modem contradicts itself and the AT interface cannot see further in. The §8.6 retry ladder is **mandatory, not defensive**; design for opaque failures, not clean error reporting.
+5. **Instrument around transactions, never inside them.** Mirroring modem AT traffic to a console during a request took the measured failure rate from ~3% to ~15%. Debug hooks must be quiescent while a request is staged or in flight — on a battery camera this misleads twice over (wrong diagnosis + burned pack).
+6. **Echo leaks the private key.** With modem command echo enabled, the `AT+QFUPL` certificate upload is echoed verbatim — any captured console log or AT trace can contain the device private key. Echo off by default; gate it hard during provisioning; treat AT traces as sensitive artifacts.
+7. **Pin the module firmware.** A real NITZ/timezone defect driving 702s existed on BG950A-GL firmware `01.201` and was fixed in `01.300`. "Quectel EG915U" is not one behavior — record the module FW version in telemetry and pin the release in procurement.
+
+The diagnostics that actually answer questions when an upload fails, captured **at failure time** and attached to the failure telemetry (feeds the §8.6 instrumentation rule): `AT+QIGETERROR`, `AT+CEER`, `AT+QIACT?`, `AT+CEREG?`, `AT+QNWINFO`.
 
 ---
 
@@ -507,9 +525,9 @@ Method note distilled from `interview-questions/interview_cellular_retries_qa.md
 
 | Layer | Tech | Notes |
 |---|---|---|
-| Reverse proxy | nginx (`nginx:v5`) | `trailcam-server` case, host port **4440** |
+| Reverse proxy | nginx (`nginx:v5`) | `trailcam-server` case, host port **4444** (4440 is taken by the sibling `lugtrax-server` on the dev host — §3.1) |
 | App | Laravel 12 (PHP 8.5-fpm) | House stack |
-| DB | MongoDB (shared `database-server`, db `wapiti`) | 13 collections |
+| DB | MongoDB (shared `database-server`, db `wapiti`) | 14 collections |
 | Cache/queue | Redis (predis) | SSE fanout, queues, rate limits |
 | AuthN | `web-auth/webauthn-lib` | Contract reused verbatim |
 | MCP | Official Laravel MCP package at `/mcp` | §11 |
@@ -520,7 +538,7 @@ Method note distilled from `interview-questions/interview_cellular_retries_qa.md
 
 nginx site `default.wapiti.cam`: `/api/`, `/auth/`, `/device/`, `/admin/api/`, `/mcp` → Laravel :8003; `client_max_body_size 25M` (4K photos + video bursts); block `.env`, `storage/`, `vendor/`.
 
-**Operator access — house tailnet.** The camera backhaul stays LTE (`NET-01..18`), but *operator* reach to this backend (and to a field unit's debug surface) can ride the shared **headscale** tailnet that now runs on the dev host (`/repos/www/headscale`, control plane on port **4443**, managed by `start-stop-services.sh --service=headscale`). On the operator laptop: `tailscale up --login-server=https://<host>:4443 --auth-key=<preauth key>` → `http://trailcam-ingest.<user>.home.arpa` (headscale serves TLS on a self-signed cert for now — trust it once on the laptop); keys are minted/revoked per operator with `docker exec headscale headscale preauthkeys create|nodes delete`. No port forwarding on the ingest host, and the join/reachability contract is written down in `/repos/www/headscale/docs/test-plan.md` (JN-01..08).
+**Operator access — house tailnet.** The camera backhaul stays LTE (`NET-01..24`), but *operator* reach to this backend (and to a field unit's debug surface) can ride the shared **headscale** tailnet that now runs on the dev host (`/repos/www/headscale`, control plane on port **4443**, managed by `start-stop-services.sh --service=headscale`). On the operator laptop: `tailscale up --login-server=https://<host>:4443 --auth-key=<preauth key>` → `http://trailcam-ingest.<user>.home.arpa` (headscale serves TLS on a self-signed cert for now — trust it once on the laptop); keys are minted/revoked per operator with `docker exec headscale headscale preauthkeys create|nodes delete`. No port forwarding on the ingest host, and the join/reachability contract is written down in `/repos/www/headscale/docs/test-plan.md` (JN-01..08).
 
 ---
 
@@ -603,27 +621,27 @@ gantt
 | Sprint | Must satisfy test IDs |
 |---|---|
 | S1 — Foundations | `AUTH-01..18`, `SRV/SVC/PHP/MIG/BLD`, `SIM-01..06`, `ING-01..10` |
-| S2 — Device | `CAM-DEV-01..14`, `YOCT-01..03`, `PIR-01..04`, `PWR-01..05`, `NET-01..05`, `PR-01..08` |
+| S2 — Device | `CAM-DEV-01..14`, `YOCT-01..03`, `PIR-01..04`, `PWR-01..05`, `NET-01..05`, `NET-19..24`, `PR-01..08` |
 | S3 — Value | `HB-01..08`, `YOCT-04..06`, `PIR-05..08`, `PWR-06..10`, `NET-06..14`, `IMG-01..08`, `ALR-01..10`, `MCP-01..20`, `OTA-01..08`, `BROWSER-01..04`, `ENC-01..08` |
 | S4 — Apps + commerce | `SUB-01..08`, `SHR-01..06`, `ADM-01..08`, E2E chains |
 | S5 — Hardening | `COLD-01..08`, `PQT-01..14`, `GAP-01..20`, `BAT-01..06`, `NET-15..18`, full E2E, security review |
 
 ### Work items
 
-**S1 — Foundations (WI-101 → WI-107)** `[ ]`
-- **WI-101** Laravel + WebAuthn scaffold (reuse contract; Pest `AUTH-01..18`).
-- **WI-102** Mongo schema + migrations (13 collections, indexes; `MIG-01..05`).
-- **WI-103** nginx site + service group (:4440; builder/test/sim one-shots; `SVC-01..04`).
-- **WI-104** Device ingest API (`/device/v1/*`): bearer auth, photo multipart, config piggyback, rate limits (`ING-01..10`).
-- **WI-105** Camera simulator: N cameras, cadence/offline/latency/photo-inject profiles (`SIM-01..06`).
-- **WI-106** Procurement + cert kickoff: SoC/sensor/modem EVKs, cold-chamber slot, PTCRB lab, Bluetooth SIG QDL, UN 38.3 booking.
+**S1 — Foundations (WI-101 → WI-107)** `[~]`
+- **WI-101** ✅ **Done (2026-10-26)** Laravel + WebAuthn scaffold (reuse contract verbatim from wificam/lugtrax: 10 endpoints under `/auth/*`, `web-auth/webauthn-lib`, auth-only Mongo migration for `users`+`credentials`; Pest `AUTH-01..18` **and** `tests/test.py` `AUTH-01..18` — the catalog authority of test-plan §1.1 — both 18/18 green).
+- **WI-102** ✅ **Done (2026-10-26)** Mongo schema + migrations (14 collections per §6.1, indexes; `MIG-01..05` + runnable `PHP-01..03`/`PHP-05` + `SRV-01..03` all green; `tests/regression.py` landed as their runner).
+- **WI-103** ✅ **Done (2026-10-26)** nginx site + service group (:4444; builder/test one-shots built, `Dockerfile.sim` shipped for WI-105; `SVC-01..04` + `BLD-01..05` green).
+- **WI-104** ✅ **Done (2026-10-26, re-verified 2026-10-27)** Device ingest API (`/device/v1/*`): bearer auth, photo multipart, config piggyback, rate limits (`ING-01..10` — 10/10 green over HTTPS; photo-multipart storage fixed via `filesystems.php` local-disk root + `DeviceController` object path).
+- **WI-105** `[ ]` Camera simulator: N cameras, cadence/offline/latency/photo-inject profiles (`SIM-01..06`) — `Dockerfile.sim` already ships from WI-103.
+- **WI-106** `[~]` Procurement + cert kickoff: SoC/sensor/modem EVKs, cold-chamber slot, PTCRB lab, Bluetooth SIG QDL, UN 38.3 booking. **Deliverables drafted 2026-10-26/27** ([kickoff](certification-kickoff.md) + [playbook](wi-106-certification-playbook.md)); **not closed** — Step 0 (approve $30–65k band, module requal ranking, lab shortlists) + Steps 1–6 (accounts, RFP sends, bookings, signatures) are human actions, nothing sent or ordered yet.
 - **WI-107** IP gate: external **FTO search on the reserve-battery GPS** (§13.1) commissioned, 1-day internal prior-art skim of §5.4 AP download, §4.11 wording discipline (capability, not competitor implementation); findings due before the S2-exit decision gate.
 
 **S2 — Device (WI-201 → WI-206)** `[ ]`
 - **WI-201** SSC377Q bring-up: Yocto BSP layer (`meta-sigmastar` wrapping the vendor kernel/u-boot/ISP blobs), sensor driver, ISP tuning baseline; first 4K still on bench; `YOCT-01..03` green.
 - **WI-202** Capture pipeline: photo+video simultaneous, IR array switching, LCD aim preview, microSD.
 - **WI-203** Wake chain: PIR + radar fusion, ≤ 1.5 s wake-to-capture, µA sleep budget (power analyzer evidence).
-- **WI-204** LTE: EG915U bring-up, multi-IMSI eSIM attach, instant-send upload, PSM between events (`NET-01..10`).
+- **WI-204** LTE: EG915U bring-up, multi-IMSI eSIM attach, instant-send upload, PSM between events; AT driver built to the §8.7 rules (bearer gate on `QIACT?`, clean staging window, 701 retry ladder, echo/key discipline, pinned firmware) (`NET-01..10`, `NET-19..24`).
 - **WI-205** C6 co-processor: BLE pairing, Wi-Fi live aim, AP-scan diagnostics, watchdog.
 - **WI-206** Power telemetry: fuel gauge, pack-ID detect, temp sensors, ring buffer + store-and-forward.
 
@@ -657,6 +675,8 @@ gantt
 ## 13. Certifications & compliance
 
 Strategy identical to lugtrax §12: buy pre-certified silicon (EG915U module grants; eSIM), certify the final product for the remainder. Budget $200–400k, 6–9 months, parallel from S1. Owner named per row before S2 exits.
+
+**WI-106 deliverables:** [`certification-kickoff.md`](certification-kickoff.md) — selections, lab shortlists, per-certification **cost + lead time for every row below**, itemized $30–65k phase-1 budget · [`wi-106-certification-playbook.md`](wi-106-certification-playbook.md) — the ordered human checklist that closes the WI.
 
 | Area | Items | When |
 |---|---|---|
@@ -711,6 +731,7 @@ Engineering-level IP screen of the wapiti design and docs; **not legal advice** 
 - OTA: signed artifacts, staged rollout, rollback; anti-downgrade version policy.
 - Anti-stalking posture page + support reporting path (competitive-analysis §5.7 analog).
 - Transport TLS everywhere; no LAN services on the camera; C6/SoC split keeps BLE surface minimal (pairing only).
+- Modem AT echo disabled by default and gated off during certificate provisioning: an echoed `AT+QFUPL` leaks the device private key into any captured log or AT trace (§8.7 rule 6); AT traces handled as sensitive artifacts.
 - Media encrypted at rest (§15.1): a stolen camera or microSD yields hardware, not photos.
 
 ### 15.1 Encrypted-at-rest media — stolen camera ≠ stolen photos (§2 row 24)
@@ -732,7 +753,7 @@ Threat: the camera or microSD is stolen — the most common way sensitive media 
 
 ## 16. Testing plan (summary)
 
-Full catalog in `test-plan.md` (**0 passed / 301 pending** at planning time), same methodology as lugtrax: Python `requests`+pytest primary suite with prefixed IDs, Pest, Playwright, infra regression runner, device suites over SSH, faraday/cold-chamber lab suites, coverage matrix, regression log with Mermaid.
+Full catalog in `test-plan.md` (**49 passed / 258 pending** after WI-101 → WI-104; 307 IDs total), same methodology as lugtrax: Python `requests`+pytest primary suite with prefixed IDs, Pest, Playwright, infra regression runner, device suites over SSH, faraday/cold-chamber lab suites, coverage matrix, regression log with Mermaid.
 
 | Suite | Prefix | Covers |
 |---|---|---|
@@ -761,6 +782,7 @@ Full catalog in `test-plan.md` (**0 passed / 301 pending** at planning time), sa
 ```
 trailcam/
   docs/                     # this plan, test-plan, research, competitive-analysis
+  builder/                  # trailcam-server:v1 (nginx site + entrypoint) + builder/test one-shot images + Dockerfile.sim (WI-103)
   device/
     yocto/                  # meta-wapiti (product services) + meta-sigmastar BSP layer
     yocto/build.sh          # one-shot containerized bitbake → wapiti-image.swu
@@ -795,6 +817,8 @@ trailcam/
 | 10 | Patent exposure — reserve-battery anti-theft GPS deliberately mirrors Ultra's marketed Active GPS; Tactacam files patents and NPEs are active in this category | **FTO search commissioned S1 (WI-107), findings before S2 exit — blocking**; match / design-around / license decided with counsel; §4.11 wording discipline (capability, not implementation) |
 | 11 | Media-key recovery misdesign = permanent photo loss (escrow too weak → thief decrypts; too strict → owner locked out) | Escrow under account KMS + WebAuthn recovery ceremony; `ENC-05..06` cover release/revocation; recovery drill before S4 exit |
 | 12 | Fleet retry storm after backend outage/deploy wakes every camera at once and amplifies the degradation | Per-class backoff + full jitter, ingest retry budget (429 + Retry-After), modem circuit breaker, staggered reconnect windows (§8.6); storm soak-tested (`NET-17..18`) |
+| 13 | Quectel modem HTTP stack fails opaquely — ~3% field 701s with contradictory diagnostics (`QIGETERROR` reports success, `CEER` empty, bearer up), staging-window sensitivity, firmware-specific defects (the BG950A-GL 01.201 NITZ/702 bug) | §8.7 driver rules baked into WI-204 and verified `NET-19..24`; retry ladder treats every upload as possibly-lost (§8.6); module firmware pinned with version in telemetry; diagnostics snapshot (`QIGETERROR`/`CEER`/`QIACT?`/`CEREG?`/`QNWINFO`) attached at failure time |
+| 14 | **Cellular module fails the US market gate** — EG915U verified (2026-10-26) to have **no NA variant** (CN/EU/LA; LA = B2/3/4/5/7/8/28/66 → no B12/B13/B71 for US low-band), **no PTCRB / no GCF / no US carrier approvals** (Quectel certification row: FCC + Anatel only; Verizon OD needs GCF Band 13), and **no GNSS** (the §4.2 “+ GNSS combo” claim is wrong — GNSS row is `-`, only QuecLocator LBS); named alternate A7672SA shows the same band gap | **Requalification decision at WI-106 Step 0 before any PO/EVK spend** — shortlist SIMCom SIM7672NA/SIM7672G (FCC firm; PTCRB/carrier rows starred *planned* on SIMCom's own sheet; B12+B13 firm, B14/B71 optional; SIM7672G on Verizon's approved-module list) or Quectel EG91-NA/EG916Q-GL (keeps the §8.7 AT lineage; EG916Q-GL prints PTCRB+FCC+GCF unstarred but stars its carrier row) — **full comparison + ranking in `certification-kickoff.md` §1, spec sheets checked 2026-10-27, with the 16-question vendor sheet (kickoff §8.3) as the instrument**; GNSS answered on-module or by a companion part; five-item PO-gate answers in writing recorded in `certification-kickoff.md` §1 — **blocking for the S2 hardware freeze, same gate posture as WI-107** |
 
 ---
 

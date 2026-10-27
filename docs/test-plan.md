@@ -25,9 +25,9 @@ Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `re
 17. [Test IDs — Browser E2E (PWA)](#17-test-ids--browser-e2e-pwa)
 18. [E2E chain tests](#18-e2e-chain-tests)
 19. [Gap coverage tests](#19-gap-coverage-tests)
-20. [Infra suites (SRV / SVC / PHP / MIG / BLD / SIM)](#20-infra-suites)
+20. [Infra suites (SRV / SVC / PHP / MIG / BLD / SIM)](#20-infra-suites-srv--svc--php--mig--bld--sim)
 21. [Device-side suites (CAM / PWR / NET / COLD / BAT)](#21-device-side-suites)
-22. [Product qualification (PQT-01..14)](#22-product-qualification-pqt-0114)
+22. [Product qualification (PQT-01..14)](#22-product-qualification-pqt-0114--lab-executed-certification-evidence)
 23. [Feature-to-test coverage matrix](#23-feature-to-test-coverage-matrix)
 24. [Regression tests](#24-regression-tests)
 25. [How to run](#25-how-to-run)
@@ -38,7 +38,7 @@ Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `re
 
 | Suite | Language | Framework | Purpose | Run |
 |---|---|---|---|---|
-| **API tests** (primary) | Python 3 | `requests` + `pytest` | All HTTP endpoints, E2E chains, gap coverage | `python3 tests/test.py --host https://localhost:4440 -v` |
+| **API tests** (primary) | Python 3 | `requests` + `pytest` | All HTTP endpoints, E2E chains, gap coverage | `python3 tests/test.py --host https://172.17.0.1:4444 -v` |
 | **PHP unit/feature** | PHP 8.5 | Pest | Policies, TierGuard, heartbeat engine, battery forecast, WebAuthn ceremonies | `php artisan test` |
 | **Browser E2E** | TypeScript | Playwright | PWA flows incl. WebAuthn `navigator.credentials.*` | `npx playwright test` |
 | **Infra smoke** | Python 3 | stdlib (`subprocess`, `urllib`) | One-shot runner for SRV/SVC/PHP/MIG/BLD/SIM; writes markdown report | `python3 tests/regression.py` |
@@ -50,15 +50,15 @@ Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `re
 
 ### 1.1 Catalog authority (sync rule)
 
-`tests/test.py` is the single source of truth: **every ID documented here must run, and every test that runs must be documented.** Until a suite exists, its IDs are **pending** (specified + expected, not yet implemented). No ID may exist in only one place; project-plan §16 and the regression report totals move in lockstep with this file. Nothing is implemented yet — **0 passed / 301 pending**.
+`tests/test.py` is the single source of truth: **every ID documented here must run, and every test that runs must be documented.** Until a suite exists, its IDs are **pending** (specified + expected, not yet implemented). No ID may exist in only one place; project-plan §16 and the regression report totals move in lockstep with this file. Current run-state: **49 passed / 258 pending**. `AUTH-01..18` (**WI-101**) run twice over — in-process by Pest (`server/tests/Feature/AuthTest.php`, the ceremony suite) and over HTTP by `tests/test.py` (the catalog authority) against the live `trailcam-server` TLS site at `https://172.17.0.1:4444`. `ING-01..10` (**WI-104**) run over HTTP by `tests/test.py` against `/device/v1/*` (latest run: 28/28 green, 2026-10-27). `MIG-01..05`, `PHP-01..03`/`PHP-05`, `SRV-01..03` (**WI-102**) and `SVC-01..04`, `BLD-01..05` (**WI-103**) run via `tests/regression.py`, the stdlib infra runner of §20 (21 green).
 
 ### 1.2 Summary (per-prefix counts)
 
 | Category | Prefix | Count | Run-state |
 |---|---|---|---|
-| Auth (WebAuthn) | AUTH | 18 | pending |
+| Auth (WebAuthn) | AUTH | 18 | implemented (WI-101) |
 | Pairing | PR | 8 | pending |
-| Ingest (device API) | ING | 10 | pending |
+| Ingest (device API) | ING | 10 | implemented (WI-104) |
 | Heartbeat / dead-camera | HB | 8 | pending |
 | Cameras & config | CAM | 16 | pending |
 | On-device verify | CAM-DEV | 14 | pending |
@@ -66,7 +66,7 @@ Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `re
 | Photos & detections | IMG | 8 | pending |
 | PIR / edge AI | PIR | 8 | pending |
 | Power & battery | PWR | 10 | pending |
-| Networking | NET | 18 | pending |
+| Networking | NET | 24 | pending |
 | Alerts | ALR | 10 | pending |
 | MCP | MCP | 20 | pending |
 | OTA | OTA | 8 | pending |
@@ -78,22 +78,24 @@ Modeled on the **lugtrax / wificam / blip.io** test-plan methodology: Python `re
 | Admin | ADM | 8 | pending |
 | E2E chains | E2E | 16 | pending |
 | Gap coverage | GAP | 20 | pending |
-| Server health | SRV | 4 | pending |
-| Service group | SVC | 4 | pending |
-| Server boot | PHP | 5 | pending |
-| MongoDB migration | MIG | 5 | pending |
-| Builder smoke | BLD | 5 | pending |
+| Server health | SRV | 4 | 3/4 implemented (WI-102) |
+| Service group | SVC | 4 | implemented (WI-103) |
+| Server boot | PHP | 5 | 4/5 implemented (WI-102) |
+| MongoDB migration | MIG | 5 | implemented (WI-102) |
+| Builder smoke | BLD | 5 | implemented (WI-103) |
 | Device simulator | SIM | 6 | pending |
 | Browser E2E | BROWSER | 4 | pending |
 | Cold chamber | COLD | 8 | pending (lab) |
 | Product qualification | PQT | 14 | pending (lab) |
-| **Total** | | **301** | **0 passed / 301 pending** |
+| **Total** | | **307** | **49 passed / 258 pending** |
 
 ---
 
 ## 2. Test IDs — Auth (WebAuthn)
 
 Contract reused verbatim from wificam/lugtrax (`web-auth/webauthn-lib`, RP_ID fixed per environment). Every test mints unique handles/emails per run (wificam regression #2 lesson).
+
+**Implemented (WI-101).** Both harnesses below run these 18 IDs: Pest in-process (`server/tests/Feature/AuthTest.php`, `cd server && php artisan test`) and the HTTP suite (`python3 tests/test.py -v`). Ceremonies are driven by a software `FakeAuthenticator` (P-256, `fmt=none`) so the server's real `web-auth/webauthn-lib` verification runs unmodified. The add-passkey endpoints are mounted at `/auth/add-passkey/*` per project-plan §10/§14.
 
 | ID | Description | Endpoint | Expected |
 |---|---|---|---|
@@ -134,6 +136,8 @@ Contract reused verbatim from wificam/lugtrax (`web-auth/webauthn-lib`, RP_ID fi
 ---
 
 ## 4. Test IDs — Ingest (device API)
+
+**Implemented (WI-104).** `tests/test.py` runs these 10 IDs over HTTPS against `/device/v1/*` (device-bearer auth, multipart photos, config piggyback) with an in-test device client that the WI-105 simulator will build on; latest run **10/10 green (2026-10-27)**. Report IDs read `ING-01..10` to match this catalog (test-plan §1.1 sync rule).
 
 | ID | Description | Endpoint | Expected |
 |---|---|---|---|
@@ -259,6 +263,17 @@ Bench + simulated; the false-trigger ledger (P5) requires empties never to bill.
 replays, outbox durability, signal gating, and fleet storm protection. Device-side tests run on the
 bench with a fault-injecting proxy; fleet soak tests run against `trailcam-sim`.
 
+**Modem AT-driver discipline (project-plan §8.7):** distilled from the house Quectel **BG950A-GL**
+LTE-M bench engagement (Podimetrics SmartMat+, several thousand instrumented HTTPS uploads,
+Oct 2026) and the trailcam reuse assessment —
+`/repos/utils/share/docs/cell-modem-reuse/podimetrics-cell-modem.md` +
+`trailcam-cell-modem-assessment.md`. The BG950A-GL itself was **rejected for the media path**
+(Cat-M1 ≈ 375 kbps up vs the 5 M Cat-1bis requirement; §4.2 of project-plan), but the EG915U shares
+the Quectel `AT+QHTTP*` lineage, so the driver rules and the measured failure catalogue transfer in
+full. Harness: EG915U EVB + offline AT-port trace capture (**not** a live console mirror during
+requests — that perturbation alone moved the field failure rate ~3% → ~15%, §8.7 rule 5) +
+fault-injecting proxy / radio fault box.
+
 | ID | Description | Surface | Expected |
 |---|---|---|---|
 | NET-11 | Backoff schedule deterministic with injected fake clock: exact sleeps = `min(cap, base·2^n)` + full jitter | device unit test (fake clock) | sleep sequence asserted exactly; no fixed-interval retry anywhere |
@@ -269,6 +284,17 @@ bench with a fault-injecting proxy; fleet soak tests run against `trailcam-sim`.
 | NET-16 | Modem circuit breaker: N consecutive transport failures → cooldown, no TX storm | fault proxy | current trace shows no retry bursts; wake aligns with schedule |
 | NET-17 | Fleet soak: 200 sim cameras through 30 min backend brownout (503s) | `trailcam-sim` fleet + proxy | ingest CPU/queue flat; retry volume ≤ budget; **no thundering herd on recovery** |
 | NET-18 | Staggered reconnect: fleet offline 2 h (tower outage sim), backend restored | `trailcam-sim` fleet | reconnects spread over minutes (per-`device_id` windows), not a single spike |
+
+### 10.1 Modem AT-driver discipline (§8.7 of project-plan; Podimetrics BG950A-GL bench evidence)
+
+| ID | Description | Surface | Expected |
+|---|---|---|---|
+| NET-19 | Bearer-before-upload gate: registered but no PDP context (`CEREG: 0,5`, `AT+QIACT?` empty) | EVB + radio fault box / airplane-mode sim | context activated (`AT+QIACT`) before staging; upload never staged on a dead bearer |
+| NET-20 | Staging-window discipline: full HTTPS upload under AT-port trace | EG915U EVB + offline trace capture | zero AT traffic between `AT+QHTTPURL` and the POST verb; RSRP/SINR sampled only *before* staging and cached |
+| NET-21 | Opaque 701/702 retry: upload fails with 701 while `QIGETERROR` reports success, `CEER` empty, bearer up | fault injection (proxy / radio) | retried per §8.6 ladder; delivered on a later attempt or parked in outbox — never dropped, never a tight loop |
+| NET-22 | Failure diagnostics snapshot on any upload failure | failure-injection run | one `QIGETERROR`/`CEER`/`QIACT?`/`CEREG?`/`QNWINFO` capture attached to the failure telemetry row, at failure time |
+| NET-23 | Echo/log discipline: cert provisioning (`AT+QFUPL`) + request staging under trace | provisioning + upload, logs collected | echo gated off; captured logs contain **no private-key PEM material**; no console mirror while a request is staged or in flight |
+| NET-24 | Modem firmware pin | bring-up + telemetry inspect | module FW version matches the pinned release and is reported in telemetry (catches firmware-scoped defects like the BG950A-GL 01.201 NITZ/702 bug) |
 
 ---
 
@@ -503,13 +529,15 @@ Added after code review (wificam GAP pattern).
 
 ## 20. Infra suites (SRV / SVC / PHP / MIG / BLD / SIM)
 
-House conventions (lugtrax §15), all pending.
+House conventions (lugtrax §15), executed by `python3 tests/regression.py` (stdlib, one-shot; report → `tests/reports/test-regression.md`).
+
+**Implemented:** `MIG-01..05`, `PHP-01..03` + `PHP-05`, `SRV-01..03` (WI-102) and `SVC-01..04`, `BLD-01..05` (WI-103) — 21 green. **Pending:** `PHP-04` (Redis wiring), `SRV-04` (MCP gate), `SIM-01..06` (WI-104/105 — `sim/sim.py` + the `trailcam-sim:v1` image; its Dockerfile already ships in `builder/`).
 
 ### 20.1 Server health (SRV-01..04)
-`curl -k https://localhost:4440/api/health` → 200, `.status=ok`, `.service=trailcam-server`; `/mcp` unauth → 401.
+`curl -k https://172.17.0.1:4444/api/health` → 200, `.status=ok`, `.service=trailcam-server`; `/mcp` unauth → 401. (Dev origin is the docker0 gateway, not loopback — see project-plan §3.1 port note.)
 
 ### 20.2 Service group (SVC-01..04)
-`./start-stop-services.sh --status | grep trailcam` → RUNNING; nginx `-t` ok; `ss -tlnp | grep 4440` LISTEN; stop/start cycle healthy.
+`./start-stop-services.sh --status | grep trailcam` → RUNNING; nginx `-t` ok; `ss -tlnp | grep 4444` LISTEN; stop/start cycle healthy.
 
 ### 20.3 Server boot (PHP-01..05)
 `php artisan list` ok; route present; `APP_KEY` set; conncheck → REDIS PONG; conncheck → MongoDB wapiti.
@@ -641,6 +669,7 @@ PQT/COLD artifacts (lab reports, photos, serials) filed under `tests/reports/pqt
 | Encrypted-at-rest media (§15.1) | ENC-01..08 | Full |
 | Networking + store-and-forward (§8.2) | NET-01..10, E2E-11..12 | Full |
 | Cellular link discipline — retries/idempotency/storm protection (§8.6) | NET-11..18 | Full |
+| Quectel AT-driver discipline — bearer gate, staging window, opaque 701s, echo/key leak, FW pin (§8.7) | NET-19..24 | Full |
 | Anti-theft + reserve GPS (§8.4) | NET-07..08, E2E-14..15, CAM-09..10 | Full |
 | Alerts (§8) | ALR-01..10 | Full |
 | MCP (§11.1) | MCP-01..20, GAP-16..17 | Full |
@@ -721,8 +750,8 @@ python3 tests/regression.py
 python3 tests/regression.py -k srv,php
 cat tests/reports/test-regression.md
 
-# Full API suite — host side
-python3 tests/test.py --host https://localhost:4440 -v
+# Full API suite — host side (dev origin = docker0 gateway; project-plan §3.1)
+python3 tests/test.py --host https://172.17.0.1:4444 -v
 
 # Full suite — in container (recommended)
 ./start-stop-services.sh --start --service=trailcam-test

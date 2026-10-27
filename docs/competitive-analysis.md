@@ -245,11 +245,16 @@ Brief requirement: **slide the pack in and out in seconds in extreme cold — wi
 
 *Rev B addendum: answers "does GPS help locate the camera in the field, and does GPS + AP-mode local download give us an edge?" — extended Oct 5, 2026 with §4.12 (encrypted-at-rest media).*
 
-### 4bis.1 GPS (GNSS) for field location — yes, and we already carry it
+### 4bis.1 GPS (GNSS) for field location — yes, and we carry it
+
+> *Rev C correction (2026-10-26): the module this section was written against (EG915U) has
+> **no GNSS** — verified against Quectel's spec (certification kickoff §1). The positioning
+> path now rides the module requalification decision: GNSS-on-module or a companion GNSS
+> part. The feature list below is unchanged — the capability stays in the design.*
 
 **Advantage of GPS on the camera, ranked by real-world value:**
 
-1. **Theft recovery (the big one).** Cameras get stolen from public-land trees constantly. Ultra's reserve-battery Active GPS — pings every 6 h after the unit is moved > ½ mile, on an internal reserve, even after main power dies — is the reference implementation, and GearJunkie called it "the most significant leap in trail camera technology in a decade." It converts a $150 loss into a police report with coordinates. Our design already matches it: EG915U **GNSS on-module**, LIS2DW12 move alert, **reserve-battery pings** (§4.11), theft-mode burst telemetry, breadcrumb export (`NET-07/08`, `E2E-14..15`).
+1. **Theft recovery (the big one).** Cameras get stolen from public-land trees constantly. Ultra's reserve-battery Active GPS — pings every 6 h after the unit is moved > ½ mile, on an internal reserve, even after main power dies — is the reference implementation, and GearJunkie called it "the most significant leap in trail camera technology in a decade." It converts a $150 loss into a police report with coordinates. Our design already matches it: **GNSS on the chosen module (or a companion GNSS part — kickoff §1)**, LIS2DW12 move alert, **reserve-battery pings** (§4.11), theft-mode burst telemetry, breadcrumb export (`NET-07/08`, `E2E-14..15`).
 2. **Setup geotag + placement coach.** Fix at claim time pins the camera on the site map automatically; in-app placement coach (§4.8) uses it. Small but daily-use.
 3. **Fleet ops at scale.** Outfitters running 30+ cameras on scattered properties locate units for battery swaps and seasonal pulls by map, not memory; telemetry geotags keep mis-mapped cameras findable.
 4. **Geofence move alerts** independent of the accelerometer (accel catches bumps/theft-in-progress; GNSS catches "someone walked off with it").
