@@ -1,0 +1,14 @@
+# trailcam-test:v1 — test runner image (project-plan §3.1, tests BLD-05).
+#
+# test-plan §1 stack: Python 3 + requests + pytest + cryptography (the
+# FakeAuthenticator in tests/test.py needs it); runs the primary suite
+# (tests/test.py) against the host-published TLS port. On this machine the
+# published port is reachable via the docker0 gateway IP (loopback publishes
+# do not bind — project-plan §3.1 port note), hence 172.17.0.1:4444.
+FROM python:3.12-slim
+
+RUN pip install --no-cache-dir requests pytest cryptography
+
+WORKDIR /repo
+
+CMD ["python3", "tests/test.py", "--host", "https://172.17.0.1:4444"]

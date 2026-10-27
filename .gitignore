@@ -37,6 +37,18 @@ desktop.ini
 .vscode/
 .idea/
 
+# --- Laravel app (server/) — house stack, WI-101 ---
+server/vendor/
+server/.env
+server/node_modules/
+server/public/build/
+server/bootstrap/cache/*.php
+server/storage/framework/sessions/*
+server/storage/framework/views/*
+server/storage/framework/cache/data/*
+server/storage/logs/*
+server/database/database.sqlite
+
 # --- Local temp / logs (real evidence reports in tests/reports/ stay tracked) ---
 *.log
 *.tmp

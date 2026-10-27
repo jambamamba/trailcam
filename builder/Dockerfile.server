@@ -1,0 +1,30 @@
+# trailcam-server:v1 — house nginx:v5 (PHP 8.5.4-fpm + nginx + Composer) plus a
+# current ext-mongodb. Project-plan §3.1 / §9.
+#
+# Why the fork from bare nginx:v5: the house image ships an ext-mongodb too old
+# for the mongodb/laravel-mongodb releases that fix the current advisories, and
+# Composer blocks every unpatched version by default. Rather than ignore the
+# advisories, we rebuild the extension from PECL (project-plan §15 supply-chain
+# posture). Used for composer installs and for running the app (WI-101+).
+FROM nginx:v5
+
+# house image runs as `ubuntu`; PECL needs root to update /usr/share/php + ext_dir.
+# The extension must be disabled while PECL upgrades it (it errors on "already loaded").
+USER root
+RUN set -eux; \
+    pecl channel-update pecl.php.net; \
+    for f in /etc/php/8.5/*/conf.d/20-mongodb.ini; do mv "$f" "$f.disabled"; done; \
+    pecl install -f mongodb-2.5.5; \
+    for f in /etc/php/8.5/*/conf.d/20-mongodb.ini.disabled; do mv "$f" "${f%.disabled}"; done; \
+    rm -rf /tmp/pear /var/lib/apt/lists/*; \
+    php -r 'exit(version_compare((string) phpversion("mongodb"), "2.4.0", ">=") ? 0 : 1);'; \
+    php -m | grep -q mongodb
+USER ubuntu
+
+# Bake the §9 site config + entrypoint so the service container is fully
+# config-as-code (build with context `builder/`):
+#   docker build -f builder/Dockerfile.server -t trailcam-server:v1 builder
+COPY nginx/wapiti-site.conf /etc/nginx/sites-enabled/wapiti.conf
+COPY server-entrypoint.sh /usr/local/bin/trailcam-entrypoint.sh
+
+CMD ["bash", "/usr/local/bin/trailcam-entrypoint.sh"]

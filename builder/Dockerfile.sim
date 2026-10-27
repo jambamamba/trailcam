@@ -1,0 +1,12 @@
+# trailcam-sim:v1 — device fleet simulator one-shot (project-plan §3.1,
+# WI-105). Same Python base as the test image (requests + pytest +
+# cryptography, which tests/test.py needs — the sim reuses the WI-104 device
+# client from it). No EXPOSE: it talks TO the server.
+#
+# The Dockerfile lands with WI-103 (service-group config-as-code); the image
+# is built in WI-105 alongside sim/sim.py.
+FROM trailcam-test:v1
+
+WORKDIR /repo
+
+CMD ["python3", "sim/sim.py"]
