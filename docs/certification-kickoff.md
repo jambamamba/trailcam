@@ -238,13 +238,18 @@ Roles are role-named until approval; the named-person column is filled at the §
 
 1. **Product:** wapiti cellular trail camera — IP67 ABS-PC enclosure, −40 °C rated,
    4K stills / 1080p video, motion-triggered, LTE-only media path.
-2. **Radios:** the module selected at Step 0 — attach **its** grant certificates (for EG915U-LA that is FCC `XMR202210EG915ULA` only; PTCRB/CE/RED/carrier certificates do not exist for it, see §1) — plus **ESP32-C6** (BLE 5 + Wi-Fi 6). Quote with **grant reuse** applied; state exactly which tests remain at device level.
+2. **Radios:** the module selected at Step 0 — attach **its** grant certificates (for EG915U-LA that is FCC `XMR202210EG915ULA` only; PTCRB/CE/RED/carrier certificates do not exist for it, see §1) — plus **ESP32-C6** (BLE 5 + Wi-Fi 6). Quote with **grant reuse** applied; state exactly which tests remain at device level. **Scope note:** the C6's Wi-Fi/BLE are *intentional* radiators riding Espressif's module grant — not an SDoC-only line (§14.4's correction to §3.2) — so ask (i) below firms that reuse before you price it.
 3. **Power:** 12×AA Li-FeS₂ primary (user-replaceable) + small Li reserve cell + rechargeable
    smart packs (5 Ah NMC / LTO).
 4. **Asks:** (a) itemized test plan + price, (b) earliest slot dates, (c) reuse recognition
    confirmation, (d) EMC bundle (CISPR 32 / EN 55032), (e) UN 38.3 device-level T1–T8 price
    + sample quantity, (f) ISED RSS bundle price, (g) optional PQT/environmental bundle
-   (IEC 60529 IP67, IEC 60068 drop/thermal/vibration, salt-fog) and chamber time.
+   (IEC 60529 IP67, IEC 60068 drop/thermal/vibration, salt-fog) and chamber time,
+   (h) **whether a device-level UN 38.3 run is required at all** when the primary AA cells are
+   user-installed — price both ways (cell-level UN 38.3 + IEC 60086-4 evidence vs a full T1–T8
+   run on the camera; §14.5 open question), and (i) written confirmation that **Espressif's
+   ESP32-C6 module grant** covers our antenna/enclosure with no permissive change, so the C6
+   is scoped as modular-grant reuse rather than a new intentional-radiator test (§14.4).
 5. **Timeline:** test window tied to EVT/PVT board dates (TBD at WI-201/WI-204 kickoff).
 
 ### 8.2 Other openings
@@ -308,3 +313,202 @@ Roles are role-named until approval; the named-person column is filled at the §
 - [x] Out-of-scope rows named explicitly (§0, §3.8, §9) so nothing is silently dropped.
 - [ ] **Not fetch-verified — open in a browser before sending the RFP packet:** PTCRB test-lab list, ISED CAB list, Bluetooth fee schedule page, and a **written PTCRB non-existence confirmation for EG915U** (their device search is JS-rendered; absence is inferred from Quectel's own certification row).
 - [x] No test IDs attach to WI-106 (no §13 API/device surface) — test-plan totals unchanged; lab evidence later lands in `PQT-01..14` / `COLD-*` (test-plan §22) filed under `tests/reports/pqt/`.
+- [ ] **§14 options pass added 2026-10-27** — four cheaper paths priced against §4's rows; **no decision taken** — the §9 gate still governs, and a "cheaper path" pick is itself a Step-0 approval item.
+
+---
+
+## 14. Options analysis — cheaper paths
+
+**Status:** 🟡 **PROPOSED — options pass, not a decision** · **Date:** 2026-10-27 · **Scope:**
+addendum to this WI-106 deliverable, re-reading §4's cost table as *scope choices* rather than
+fixed law.
+**Trigger:** §1 reopened the module line, and $200–400k of envelope is mostly radio scope —
+price the alternatives before Step 0 commits.
+
+### 14.0 The precedent: a radio that was already certified
+
+Field note from the AgLeader display program: the display shipped with a **USB WiFi/cellular
+dongle**, and the display itself went through **no radio certification**. That is not a
+loophole — it is the certification boundary working as designed:
+
+- the dongle was a **separately authorized product**: its own FCC ID, its own PTCRB, its own
+  carrier approvals, all held by the dongle's vendor and already paid for;
+- the display had **no intentional radiator of its own**, so its US obligation was Part 15B
+  **SDoC** — an EMC emissions test, self-declared: no TCB filing, no radio lab slot, no
+  program fee;
+- carrier acceptance rode the dongle, because the network approves the certified radio
+  product, not your enclosure.
+
+**The lesson for wapiti:** rows 4–9 of §4 (PTCRB, FCC/TCB, ISED, RED radio, carrier —
+**$25–100k** of the itemized program) exist only because the radio is *inside the thing we
+sell*. Move that boundary, or delete the radio, and those rows disappear; everything else in
+§4 stays.
+
+### 14.1 Fixed floor vs. variable scope
+
+| Fixed (owed by any unit we sell, radio or not) | Variable (scope decisions this section prices) |
+|---|---|
+| FCC **SDoC** for the digital device (Part 15B EMC) — always | FCC **Certification** scope: which radios, which markets (rows 5, 6) |
+| FCC authorization for **whatever radio we ship** — you cannot lawfully market a US radio without it | **PTCRB + carrier acceptance** (rows 4, 9) — cellular-only, and the largest/most fragile line |
+| Cell transport evidence (row 2/3): cell- or pack-level UN 38.3 | CE/RED + UKCA (rows 7, 8) — market choice, not law, for a US-first v1 |
+| Every published claim needs a report: IP67, −40 °C, 500-cycle latch (row 17) | BLE → Bluetooth SIG declaration (row 1) — drop BLE, drop the fee |
+| PSTI/ETSI for a network-connectable product (row 15) — documentation work | UL NRTL (row 12) and the rechargeable-pack track (row 18) — channel / SKU choices |
+
+### 14.2 Option A — radio outside the enclosure (the AgLeader model, literally)
+
+Ship the product **without a wide-area radio** and put cellular in a separately certified,
+resold peripheral/gateway.
+
+- **For wapiti this works only as a two-SKU split:** the camera is WiFi/BLE + local storage
+  (SD card), and cellular lives in a separate certified outdoor bridge (an off-the-shelf or
+  ODM-certified box) sold as an accessory. The camera's program then has **no cellular rows at
+  all**: row 4 → $0, row 9 → $0, row 5 → SDoC-only for the camera, row 6 → $0, row 7 → RED
+  self-assessment.
+- **Cost of the split:** two SKUs, two enclosures, a cable/ingress (IP67) problem between them,
+  cloud ingestion for two device classes, and a support story ("why doesn't my camera
+  upload?"). A bridge also needs mains or solar power — many trail sites have neither.
+
+**Costing — planning-grade, built from §4.2's BOM; assumptions stated, not quotes:**
+
+| Line | Integrated (plan of record) | A-1: bridge **bought** (resold, already certified) | A-2: bridge **built** |
+|---|---|---|---|
+| Camera BOM @10k | **$62–65** (§4.2) | **$49–52** — minus cellular $11 + eSIM $2; the C6 stays for setup/live-aim | **$49–52** |
+| Bridge cost per site | — | ~**$60–90** landed (outdoor LTE gateway; the vendor holds the grants) | ~**$30–38** BOM (Cat-1bis module $11 + SoC/PSU/PCB/IP enclosure) |
+| Radio certification (§4 rows 4, 5, 6, 9) | ≈ **$15–60k** on one unit | **≈ $0 new** — reselling a certified device; camera drops to SDoC + SIG | ≈ **$15–60k again**, but on a mains, indoor-rated box: no −40 °C, no IP67 chamber, simpler EMC |
+| UN 38.3 device-level | required — cells ship installed in the camera | still required for the camera (ask (h) above) | camera only; the bridge is mains, no cell |
+| Certification envelope | **$84–251k** itemized (§4) | **≈ $10–25k** (SDoC/EMC + SIG + cell evidence + whatever claims we keep) | ≈ §4 unchanged, less only what the mains box drops |
+| Elapsed | 6–9 months | **~2–4 months** to a sellable camera | 6–9 months |
+| Physical constraint | none | camera must sit within **WiFi range of the bridge** (tens of metres outdoors, best with line of sight); bridge needs **mains or solar** | same |
+
+**Read:** only **A-1 changes the envelope** — it turns a $200–400k program into a ~$10–25k one
+— but it sells a camera that uploads *only near a bridge*, so it is a cabin/yard SKU, not a
+replacement for the remote camera. A-2 spends the same certification money on a second unit
+plus a second support surface: **do not build the bridge unless the off-the-shelf options fail
+the §1 PO-gate discipline.**
+
+- **Verdict:** the right shape if a **cabin/yard WiFi variant** is a real product line; wrong
+  as a replacement for the all-in-one remote camera, which is the product §0 describes.
+
+### 14.3 Option B — sell a product that is already certified (highest leverage while §1 stands)
+
+Private-label an ODM product that **already holds** FCC + PTCRB + carrier grants, exactly the
+pattern §1 already cites (SPYPOINT Flex-M shipping `EG91-NA`).
+
+- **What it removes:** the whole §1 requalification gate stops being our problem; rows 4, 5, 6,
+  9 collapse to a **permissive-change** evaluation (Class I for enclosure-only changes — no new
+  grant) or to zero if the RF chain, antenna and enclosure apertures are untouched.
+- **What it keeps:** rows 11 (safety/EMC), 13, 14 (environmental), 15 (cyber), 19 (SPDX), and
+  row 17 if we keep publishing IP67 / −40 °C claims — our differentiators don't come free.
+- **What it costs:** margin (ODM + margin vs. in-house BOM), MOQ, roadmap locked to the ODM,
+  and the **grantee question** — rebranding a certified device needs either the vendor to file a
+  change of grantee ID (cheap, via a TCB) or the original markings to stay.
+- **Verify before believing it:** the grant must cover the **exact SKU + variant we sell**, and
+  the carrier approvals must be for **that model**, not a sibling — the PO-gate questions (a)–(f)
+  in §1 get *shorter*, not deleted.
+- **Est. effect:** −**$13–60k** on §4 rows 4–9 plus the removal of the §1 schedule risk; the
+  remaining itemized program is roughly **$70–140k**, still inside §13's envelope.
+
+### 14.4 Option C — WiFi/BLE only: what "just WiFi" or "just BLE" actually requires
+
+**Answering the direct question — yes, a WiFi-only or BLE-only product still needs
+authorization, but a completely different (and much cheaper) kind:**
+
+| Obligation | WiFi only | BLE only | Both (our ESP32-C6) |
+|---|---|---|---|
+| FCC (US) | **Certification** (Part 15 Subpart C, §15.247 / §15.407) → FCC ID via TCB — *unless* ridden on a pre-certified module's grant | **Certification** (§15.247) → FCC ID — same module caveat | same, once, on the module grant |
+| FCC (US), digital circuits | Part 15B **SDoC** — always, even when the radio rides a module grant | same | same |
+| Bluetooth SIG | none | **Declaration + listing** (QDID reuse ≈ $4–9.6k) — contractual, not statutory, but enforced | SIG applies (row 1) |
+| EU (RED) | EN 300 328 (2.4G) / EN 301 893 (5G DFS) + EN 301 489 → **self-assessed DoC** when harmonized standards are fully applied | EN 300 328 + EN 301 489 → self-assessed | DoC incl. EN 303 645 / EN 18031 (RED 3.3, in force since 2025-08-01) |
+| Canada (ISED) | reuse the module's IC grant, else Certification (RSS-247 family) + ICES-003 | reuse, else RSS-247 | reuse, else RSS-247 |
+| **PTCRB / carrier acceptance** | **none — cellular-only** | **none** | **none** |
+
+- **Correction to §3.2:** the line "unintentional radiator (C6 Wi-Fi, digital device) → SDoC"
+is right only because the **C6 rides Espressif's module grant**. WiFi/BLE are *intentional*
+radiators; what makes them cheap is the modular grant, not the SDoC classification. Worth one
+line of RFP wording so the lab scopes us correctly.
+- **What a WiFi/BLE-only wapiti would cut:** rows 4 ($10–20k), 6 ($2–6k), 9 (≤$30k) → $0; row
+  5 → SDoC-only; row 7 (RED) → self-assessment, no notified-body retainer; §1's entire module
+crisis becomes irrelevant (there is no cellular module to qualify). **Rough cut: $40–100k off
+the itemized program and the longest schedule risk removed.**
+- **What it costs in product terms:** no uploads away from home WiFi, so "buyer is rural"
+(§1) stops being true; cellular becomes a later, properly-funded wave. This is the honest
+trade: it is a **different product**, not a cheaper one.
+
+**Pre-certified hosts — the CM4/CM5 question (applies to any Pi-based variant of this
+product):**
+
+- **Raspberry Pi has already done the radio work.** The CM4 launch material tells integrators
+  to "take advantage of our **modular certification** to reduce the conformance testing costs
+  for your finished product", and the CM5 launch states that use of the Pi Antenna Kit "is
+  covered by our FCC modular compliance". Pi's Product Information Portal publishes the FCC,
+  CE/DoC and world-wide approvals per module (CM4 approvals, CM5 approvals incl. a *Radio
+  Module* section).
+- **So: no WiFi/BLE Certification of our own** when we build on the wireless CM4/CM5 variant,
+  **provided we stay inside the modular conditions**: approved antenna options only (on-board
+  PCB antenna *with* the specified ground-plane cut-out, or the Pi Antenna Kit for metal
+  enclosures), no RF-layout deviations, the FCC ID / "Contains FCC ID…" statement on our
+  label and in our manual, and no change that would be a permissive change.
+- **What we still owe with a CM4/CM5 host:** (1) our own **Part 15B SDoC** for the carrier
+  board (its digital emissions are ours), (2) the **SIG declaration** for our end product —
+cite the existing controller/stack QDID rather than qualifying a new design, (3) an **EU DoC**
+  that references Pi's RED reports plus our own EMC, (4) the same for ISED.
+- **One trap:** the *whole-board* Pi 4B / Pi 5 (FCC IDs `2ABCB-RPI4B`, `2ABCB-RPI5`) is
+  certified as a **single board computer** — a host certification, not a modular transmitter
+  grant. Embedding a full SBC inside our product is a case-by-case call labs handle
+  differently from a CM. **Take the CM route for anything we ship; get the SBC route in
+  writing from a lab first.**
+- **Nothing is owed until we market it:** prototypes, EVK rigs and in-house bench units carry
+  **no** FCC equipment authorization — the obligation attaches on *marketing* (sale or
+  distribution) in the US, so bring-up costs zero radio paperwork.
+- **Sources (checked 2026-10-27):** CM4 launch post, modular-certification quote —
+  raspberrypi.com/news/raspberry-pi-compute-module-4/ · CM5 launch post, Antenna Kit "covered
+  by our FCC modular compliance" — raspberrypi.com/news/compute-module-5-on-sale-now/ ·
+  approval sets — pip.raspberrypi.com/categories/636-approvals (CM4) and
+  /categories/1102-approvals (CM5, *Radio Module* section incl. an FCC SDoC) · full-board IDs
+  `2ABCB-RPI4B` / `2ABCB-RPI5` (fccid.io).
+- **Fit for wapiti:** a CM4/CM5 is far too much power and cost for the camera's always-on
+  −40 °C duty cycle; it is relevant only to a mains-powered hub/base variant (Option A's
+  bridge) or to bench tooling.
+
+### 14.5 Option D — scope surgery inside the current plan (no radio change)
+
+Keeps the §1 module decision intact; cuts market/claim/channel scope instead.
+
+| Cut | Rows affected | Saves (our own §4 estimates) | What it costs us |
+|---|---|---:|---|
+| US-first: defer CE/RED + UKCA + ISED | 6, 7, 8 | **$14–34k** + a notified-body queue | no EU/UK/CA sale until a later wave |
+| Sell direct (no big-box): drop UL NRTL | 12 | **$5–15k** | retail-channel listing if we ever want it |
+| Drop the NMC/LTO pack SKUs, primary cells only | 18 | **$5–20k** + 8–14 weeks | no rechargeable pack revenue; §5.1 smart-pack story |
+| Drop published PQT/COLD claims | 17 | **$8–25k** | IP67 / −40 °C / latch claims we can no longer print |
+| Drop BLE (WiFi + button/app setup instead) | 1 | **$4–9.6k** | setup UX; PSTI still applies to a network-connectable product |
+| Module already carries carrier approvals (§1 gate (c)) | 9 | **$0–10k per carrier** | only achievable on EG916Q/SIM7672G-class parts — see §1 |
+| | **Total removable** | **≈ $36–134k** of the $84–251k itemized program | |
+
+### 14.6 What none of the options let us skip
+
+1. **FCC authorization for any radio we ship** (Certification via TCB) and **SDoC for the
+   digital device** — legal to market in the US, not a budget preference.
+2. **PTCRB + carrier acceptance** if we keep cellular and want AT&T/T-Mobile/Verizon — their
+   own program docs require end-device PTCRB; module grants alone do not get a device on
+   network (§1 is right, and this is why Option C exists as a product fork).
+3. **UN 38.3 at cell or pack level** for the lithium chemistry we ship.
+4. **SIG declaration if BLE ships** — with QDID reuse it is the cheapest radio-adjacent row we
+   have; cutting BLE to save it is usually a bad trade against the setup UX.
+
+### 14.7 Read + recommended order
+
+1. **Do Option D now** — it is free, reversible, and independent of §1. Take the
+   "US-first + primary cells only" pair at Step 0; treat UL NRTL and PQT claims as a *channel*
+decision recorded in §13's row notes.
+2. **Run Option B in parallel with §1's PO gate** — if the §8.3 question sheet does not come
+   back in writing from Quectel/SIMCom inside the Step-0 window, the rebadge path is the
+   fallback that keeps the schedule, and it is already half-researched (§1's `EG91-NA` row).
+3. **Treat Option A/C as a product fork, not a cost cut** — put "WiFi-first v1 + certified
+cellular bridge" to the same human gate as the module ranking; it is the only path that
+   genuinely removes the $200–400k radio program rather than shrinking it.
+
+**Three questions this section could not answer from documents alone:** (a) does the lab agree
+that a user-installed primary AA (row 2/3) needs only cell-level UN 38.3, not a device-level
+T1–T8 run? (b) does Espressif's C6 module grant cover *our* antenna/enclosure without a
+permissive change? (c) is a "camera + certified bridge" two-SKU BOM cheaper than one
+integrated unit over 3 years? Route (a)–(b) to the RFP packet (§8.1) and (c) to product.
